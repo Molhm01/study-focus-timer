@@ -222,3 +222,5 @@ body { background: #101418; }
 .ft-scene-stage{position:fixed;inset:0;z-index:-3;overflow:hidden}.ft-scene-stage .ft-bg{z-index:0}.ft-extra-scenes summary{cursor:pointer;color:var(--muted);padding:12px 0}.ft-extra-scenes>.ft-bgswatches{margin-top:12px}
 
 .ft-stream-status{position:absolute;bottom:20px;left:20px;right:20px;font-size:13px;color:#fff;text-align:center;z-index:4;text-shadow:0 1px 4px #000}
+
+.ft-bgswatch-name{background:#111820e8;bottom:0;padding:3px 5px!important;font-size:11px!important;line-height:1.2!important;max-height:28px;overflow:hidden}
