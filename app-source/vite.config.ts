@@ -14,6 +14,9 @@ export default defineConfig({
                 manualChunks(id) {
                     if (id.includes('/photos/')) { const m = id.match(/\/photos\/(\w+)\./); return m ? 'photo-' + m[1] : undefined; }
                     if (id.includes('/thumbs/')) { return 'thumbs'; }
+                    // Split framework code so each emitted file stays small enough
+                    // for the GitHub web editor deployment path (< 256 KB each).
+                    if (id.includes('node_modules')) { return 'vendor'; }
                 },
             },
         },
