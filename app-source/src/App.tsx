@@ -223,10 +223,17 @@ const ALARMS = [
 // Ambient sounds. File entries are real recordings (Pixabay, free under the Pixabay Content
 // License - see README), trimmed and loop-crossfaded, played gapless through Web Audio buffers.
 // White/brown noise are genuinely generated noise, so they stay synthesized.
-const AMBIENTS = [
+const AMBIENTS: { id: string; name: string; file?: string }[] = [
     { id: 'none', name: 'Off' },
-    { id: 'rain', name: 'Rain' },
-    { id: 'cafe', name: 'Cafe' },
+    { id: 'rain', name: 'Rain', file: 'sounds/rain.m4a' },
+    { id: 'storm', name: 'Thunderstorm', file: 'sounds/thunderstorm.m4a' },
+    { id: 'ocean', name: 'Ocean waves', file: 'sounds/ocean.m4a' },
+    { id: 'forest', name: 'Forest birds', file: 'sounds/forest.m4a' },
+    { id: 'fire', name: 'Fireplace', file: 'sounds/fireplace.m4a' },
+    { id: 'cafe', name: 'Restaurant chatter', file: 'sounds/coffee-shop.m4a' },
+    { id: 'night', name: 'Field cricket', file: 'sounds/crickets.m4a' },
+    { id: 'wind', name: 'Wind', file: 'sounds/wind.m4a' },
+    { id: 'stream', name: 'Stream', file: 'sounds/stream.m4a' },
     { id: 'brown', name: 'Brown noise' },
     { id: 'white', name: 'White noise' },
 ];
@@ -305,37 +312,54 @@ function makeNoiseBuffer(ctx: AudioContext, kind: 'white' | 'brown'): AudioBuffe
     return buf;
 }
 
+const AUDIO_PARTS: Record<string, string[]> = {"sounds/rain.m4a":["sounds/rain-0.txt","sounds/rain-1.txt","sounds/rain-2.txt","sounds/rain-3.txt","sounds/rain-4.txt","sounds/rain-5.txt"],"sounds/thunderstorm.m4a":["sounds/thunderstorm-0.txt","sounds/thunderstorm-1.txt","sounds/thunderstorm-2.txt","sounds/thunderstorm-3.txt","sounds/thunderstorm-4.txt","sounds/thunderstorm-5.txt"],"sounds/ocean.m4a":["sounds/ocean-0.txt","sounds/ocean-1.txt","sounds/ocean-2.txt","sounds/ocean-3.txt","sounds/ocean-4.txt","sounds/ocean-5.txt"],"sounds/forest.m4a":["sounds/forest-0.txt","sounds/forest-1.txt","sounds/forest-2.txt","sounds/forest-3.txt","sounds/forest-4.txt"],"sounds/fireplace.m4a":["sounds/fireplace-0.txt","sounds/fireplace-1.txt","sounds/fireplace-2.txt","sounds/fireplace-3.txt","sounds/fireplace-4.txt","sounds/fireplace-5.txt"],"sounds/coffee-shop.m4a":["sounds/coffee-shop-0.txt","sounds/coffee-shop-1.txt","sounds/coffee-shop-2.txt","sounds/coffee-shop-3.txt","sounds/coffee-shop-4.txt","sounds/coffee-shop-5.txt"],"sounds/crickets.m4a":["sounds/crickets-0.txt","sounds/crickets-1.txt","sounds/crickets-2.txt","sounds/crickets-3.txt"],"sounds/wind.m4a":["sounds/wind-0.txt","sounds/wind-1.txt","sounds/wind-2.txt","sounds/wind-3.txt","sounds/wind-4.txt","sounds/wind-5.txt"],"sounds/stream.m4a":["sounds/stream-0.txt","sounds/stream-1.txt","sounds/stream-2.txt","sounds/stream-3.txt","sounds/stream-4.txt","sounds/stream-5.txt"]};
+const ambientBufCache: Record<string, Promise<AudioBuffer>> = {};
+function ambientBuf(ctx: AudioContext, file: string): Promise<AudioBuffer> {
+    if (!ambientBufCache[file]) {
+        ambientBufCache[file] = Promise.all((AUDIO_PARTS[file] || []).map(async (part) => {
+            const r = await fetch(part);
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return (await r.text()).trim();
+        })).then((parts) => {
+            if (!parts.length) throw new Error('Recording unavailable');
+            const raw = atob(parts.join(''));
+            return ctx.decodeAudioData(Uint8Array.from(raw, (c) => c.charCodeAt(0)).buffer);
+        }).catch((error) => { delete ambientBufCache[file]; throw error; });
+    }
+    return ambientBufCache[file];
+}
+
 function startAmbient(kind: string, volume: number): (() => void) | null {
     if (kind === 'none') return null;
+    const def = AMBIENTS.find((a) => a.id === kind);
     const ctx = audioCtx();
     const master = ctx.createGain();
     master.gain.value = volume;
     master.connect(ctx.destination);
+    if (def?.file) {
+        let stopped = false;
+        let src: AudioBufferSourceNode | null = null;
+        ambientBuf(ctx, def.file).then((buf) => {
+            if (stopped) return;
+            src = ctx.createBufferSource();
+            src.buffer = buf;
+            src.loop = true;
+            src.connect(master);
+            src.start();
+        }).catch(() => { /* file failed to load: stay silent, chip stays selected */ });
+        return () => { stopped = true; try { src?.stop(); } catch { /* not started */ } try { master.disconnect(); } catch { /* gone */ } };
+    }
     const src = ctx.createBufferSource();
     src.buffer = makeNoiseBuffer(ctx, kind === 'white' ? 'white' : 'brown');
     src.loop = true;
     let node: AudioNode = src;
-    if (kind === 'rain') {
-        const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 420;
-        const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1500;
-        node.connect(hp); hp.connect(lp); node = lp;
-    } else if (kind === 'cafe') {
-        const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 520;
-        node.connect(lp); node = lp;
-    } else if (kind === 'brown') {
+    if (kind === 'brown') {
         const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900;
         node.connect(lp); node = lp;
     }
-    const swell = ctx.createGain();
-    swell.gain.value = 0.85;
-    const lfo = ctx.createOscillator();
-    const lfoGain = ctx.createGain();
-    lfo.frequency.value = kind === 'rain' ? 0.13 : 0.07;
-    lfoGain.gain.value = 0.15;
-    lfo.connect(lfoGain); lfoGain.connect(swell.gain);
-    node.connect(swell); swell.connect(master);
-    src.start(); lfo.start();
-    return () => { try { src.stop(); lfo.stop(); master.disconnect(); } catch { /* already stopped */ } };
+    node.connect(master);
+    src.start();
+    return () => { try { src.stop(); master.disconnect(); } catch { /* already stopped */ } };
 }
 
 // ---------- media helpers ----------
@@ -1369,4 +1393,4 @@ function MainApp() {
             </button>
         </div> : null}
     </div>;
-                              }
+}
