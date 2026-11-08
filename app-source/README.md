@@ -8,9 +8,7 @@ From `app-source`, run `npm install`, `npx tsc --noEmit`, then `npm run build`. 
 
 ## Video backgrounds
 
-The timer has 101 longer study scenes with 20-76.71 seconds of native source footage, plus 110 earlier selections kept under their saved IDs (211 distinct source videos in total). Longer scenes are shown separately so short legacy clips are not counted toward the longer collection. Whole-scene containment preserves native-wide compositions on phones, with plain dark margins. A dissolve softens the repeat; it does not lengthen the unique source footage or guarantee a naturally perfect seam. Sources stream only when selected; no whole-catalog video download happens at startup. Portrait scenes on wide screens keep the whole composition with a plain dark matte, not enlarged blur-fill. Two video elements share the selected URL and overlap their end and beginning with a dissolve. End timing uses the verified complete-file duration, not the temporary duration Chromium can report while a fragmented MP4 is still loading. All211 source durations were checked from complete files with ffprobe. This smooths the wrap, not a claim that source footage is naturally cyclic. Playback pauses when hidden, minimized or animation is turned off. Muted inline autoplay is attempted; a tap retries if the browser blocks it. Phones, low-power mode, network speed and source availability can affect playback. If a source fails, a local rainy photo remains and Settings offers other choices. The timer itself does not depend on the external video server.
-
-Pixabay expressly permits direct video application embeds in https://pixabay.com/api/docs/ under Hotlinking, and app incorporation in https://pixabay.com/service/faq/ . Videos are under the Pixabay Content License, NOT described as copyright-free or owned by this project. https://pixabay.com/service/terms/ . No new standalone raw licensed video is included. The contact-sheet picker is a composed app-preview design with labels and framing, not a stock image collection or a set of externally hotlinked stills. Earlier raw files, if retained in git history, keep their original rights; this project does not grant their redistribution.
+The timer has 197 animated scene choices (8 featured plus themed real-world and illustrated groups), down from 211 after a loop-quality pass removed 14 sources whose motion visibly resets at the repeat (walking, camera drift, lighting shifts). Quality over count: only scenes whose end-to-start transition blends into natural motion are listed. All scenes fill the whole screen (object-fit cover); no letterbox bars. The player uses one video element and mounts a second only during the end-of-clip dissolve, shows the scene's own preview image while the stream starts instead of a black frame, and automatically retries other quality variants (medium, large, small, tiny) before reporting a failure. Phones start at the small variant (same resolution, lower bitrate) so scenes start faster on mobile data. End timing uses the verified complete-file duration, not the temporary duration Chromium can report while a fragmented MP4 is still loading. Playback pauses when hidden, minimized or animation is turned off. Muted inline autoplay is attempted; a tap retries if the browser blocks it. Phones, low-power mode, network speed and source availability can affect playback. A saved scene ID that no longer exists falls back to the default scene instead of an empty background. The timer itself does not depend on the external video server.
 
 ### Older selections
 - shrine: https://pixabay.com/videos/anime-style-fantasy-japanese-shrine-348164/
@@ -125,6 +123,21 @@ Pixabay expressly permits direct video application embeds in https://pixabay.com
 - Forest waterfall: https://pixabay.com/videos/waterfall-trees-forest-jungle-208570/
 - Moonlit ocean: https://pixabay.com/videos/waves-ocean-sea-moonlight-moon-372255/
 - Snowy walk: https://pixabay.com/videos/winter-snow-nature-cold-frost-336603/
+
+### Earth landmark sources (added 2026-11-08, loop-checked, Pixabay Content License)
+
+- Eiffel Tower by the Seine: https://pixabay.com/videos/eiffel-tower-river-boats-paris-215421/
+- Brooklyn Bridge at night: https://pixabay.com/videos/new-york-night-brooklyn-bridge-city-10866/
+- Statue of Liberty: https://pixabay.com/videos/statue-of-liberty-statue-liberty-149070/
+- Golden Gate Bridge: https://pixabay.com/videos/san-francisco-golden-gate-bridge-17962/
+- Northern lights: https://pixabay.com/videos/northern-lights-aurora-borealis-200313/
+- Green aurora: https://pixabay.com/videos/aurora-borealis-green-aurora-292822/
+- Golden beach sunset: https://pixabay.com/videos/ocean-beach-sunset-waves-dawn-183960/
+- Rolling ocean waves: https://pixabay.com/videos/wave-ocean-background-sea-slow-45704/
+- Mount Fuji sunrise: https://pixabay.com/videos/mountains-mount-fuji-before-sunrise-214938/
+- Mount Fuji lake: https://pixabay.com/videos/mount-fuji-japan-natural-sky-91319/
+- Rainbow waterfall: https://pixabay.com/videos/waterfall-rainbow-river-nature-246856/
+- Mountain river falls: https://pixabay.com/videos/river-waterfall-mountain-forest-173887/
 
 ## Photos
 
