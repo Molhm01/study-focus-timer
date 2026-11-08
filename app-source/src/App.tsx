@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 // ---------- device-local storage (plain localStorage on standalone hosting) ----------
 function useLocalState<T>(key: string, initial: T): [T, (v: T | ((prev: T) => T)) => void, { ready: boolean; message: string }] {
@@ -73,6 +74,7 @@ interface Settings {
     ambient: string; ambientVolume: number;
     notifications: boolean; keepAwake: boolean;
     background: { kind: BgKind; id?: string; source?: string };
+    bgAnimate: boolean;
     scrim: number;
     accent: string; font: string;
     clockStyle: 'ring' | 'bar' | 'minimal'; clockSize: 's' | 'm' | 'l';
@@ -93,6 +95,7 @@ const DEFAULT_SETTINGS: Settings = {
     ambient: 'none', ambientVolume: 0.5,
     notifications: false, keepAwake: false,
     background: { kind: 'builtin', id: 'rain' },
+    bgAnimate: true,
     scrim: 0.45,
     accent: '#9fd8c6', font: 'sans',
     clockStyle: 'ring', clockSize: 'm',
@@ -125,9 +128,14 @@ const ANIMATED_BGS = [
     { id: 'rainfall', name: 'Rain streaks' },
 ];
 
-// Animated video scenes, lazy-loaded like the photos. Source: Pixabay, free to use under the
-// Pixabay Content License (no attribution required). Asset IDs and regeneration: see README.
-const SCENES = [
+// Animated video scenes. Local scenes live at scenes/<id>-p.mp4 (portrait) and scenes/<id>-l.mp4
+// (landscape) with matching posters scenes/<id>-p.jpg / -l.jpg, encoded from native-resolution
+// masters (never upscaled) as long seamless loops. Remote scenes stream a single licensed file
+// from its source CDN and use a local poster scenes/<id>.jpg. A video downloads only when its
+// scene is selected; posters load lazily while the picker is open.
+// Sources: Pixabay / Mixkit free licenses (per-asset pages in README). Free to use, NOT CC0.
+interface SceneDef { id: string; name: string; url?: string }
+const SCENES: SceneDef[] = [
     { id: 'shrine', name: 'Moonlit shrine' },
     { id: 'rainy-window', name: 'Rainy window' },
     { id: 'misty-river', name: 'Misty river' },
@@ -138,10 +146,7 @@ const SCENES = [
     { id: 'cozy-window', name: 'Rainy desk' },
     { id: 'balcony-dusk', name: 'Evening balcony' },
 ];
-// Scene media are real files in public/scenes/ (copied to dist on build): <id>-p/-l .mp4 (portrait
-// 1080x1920 / landscape 1920x1080) and matching .jpg posters. Real URLs (not blob/data URIs) so
-// playback works on iOS Safari; files load only when a scene is picked or its poster is shown.
-// Actual committed filenames (GitHub's web upload UI prefixed each name with a counter - see README).
+const SCENES_EXTRA: SceneDef[] = [];
 const SCENE_FILES: Record<string, string> = {
     'balcony-dusk-l.jpg': '53-balcony-dusk-l.jpg',
     'balcony-dusk-l.mp4': '32-balcony-dusk-l.mp4',
@@ -181,6 +186,7 @@ const SCENE_FILES: Record<string, string> = {
     'water-garden-p.mp4': '23-water-garden-p.mp4'
 };
 const sceneMedia = (id: string, orientation: 'p' | 'l', ext: 'mp4' | 'jpg') => `scenes/${SCENE_FILES[`${id}-${orientation}.${ext}`]}`;
+const scenePoster = (s: SceneDef, o: 'p' | 'l') => sceneMedia(s.id, o, 'jpg');
 
 const ACCENTS = [
     { id: 'mint', name: 'Mint', value: '#9fd8c6' },
@@ -214,6 +220,9 @@ const ALARMS = [
     { id: 'custom', name: 'My sound' },
 ];
 
+// Ambient sounds. File entries are real recordings (Pixabay, free under the Pixabay Content
+// License - see README), trimmed and loop-crossfaded, played gapless through Web Audio buffers.
+// White/brown noise are genuinely generated noise, so they stay synthesized.
 const AMBIENTS = [
     { id: 'none', name: 'Off' },
     { id: 'rain', name: 'Rain' },
@@ -386,6 +395,7 @@ const ICON_TASKS = 'M4 6h16|M4 12h16|M4 18h10';
 const ICON_SETTINGS = 'M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7|M12 2.5v3|M12 18.5v3|M4.9 4.9l2.2 2.2|M16.9 16.9l2.2 2.2|M2.5 12h3|M18.5 12h3|M4.9 19.1l2.2-2.2|M16.9 7.1l2.2-2.2';
 const ICON_CLOSE = 'M6 6l12 12|M18 6L6 18';
 const ICON_PLAY = 'M8 5.5v13l11-6.5z';
+const ICON_POPOUT = 'M14 4h6v6|M20 4l-8 8|M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5';
 // ---------- small ui helpers ----------
 function fmt(ms: number) {
     const total = Math.max(0, Math.round(ms / 1000));
@@ -419,66 +429,89 @@ function Toggle({ label, hint, checked, onChange }: { label: string; hint?: stri
 }
 
 // ---------- memoized subtrees: the ticking clock must not re-render these ----------
-const SceneVideo = React.memo(function SceneVideo({ id, paused }: { id: string; paused: boolean }) {
+const SceneVideo = React.memo(function SceneVideo({ scene, paused, animate }: { scene: SceneDef; paused: boolean; animate: boolean }) {
     const ref = useRef<HTMLVideoElement | null>(null);
-    const [reduceMotion] = useState(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     const [portrait, setPortrait] = useState(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(orientation: portrait)').matches);
-    const [motionOverride, setMotionOverride] = useState(false);
     useEffect(() => {
         const mq = window.matchMedia('(orientation: portrait)');
         const fn = () => setPortrait(mq.matches);
         if (mq.addEventListener) mq.addEventListener('change', fn);
         return () => { if (mq.removeEventListener) mq.removeEventListener('change', fn); };
     }, []);
+    const o = portrait ? 'p' : 'l';
+    const poster = scenePoster(scene, o);
+    const src = scene.url || sceneMedia(scene.id, o, 'mp4');
     useEffect(() => {
         const v = ref.current;
-        if (!v || reduceMotion) return;
+        if (!v) return;
         const sync = () => {
-            if (paused || document.hidden) v.pause();
+            if (paused || !animate || document.hidden) v.pause();
             else v.play().catch(() => { /* autoplay blocked (e.g. low power mode): poster stays, next tap retries */ });
         };
         sync();
         // iOS low power mode only allows playback from a user gesture: retry on any tap.
-        const retry = () => { if (!paused && !document.hidden) v.play().catch(() => { /* still blocked */ }); };
+        const retry = () => { if (!paused && animate && !document.hidden) v.play().catch(() => { /* still blocked */ }); };
         document.addEventListener('visibilitychange', sync);
         window.addEventListener('pointerdown', retry);
         return () => { document.removeEventListener('visibilitychange', sync); window.removeEventListener('pointerdown', retry); };
-    }, [paused, reduceMotion, id, portrait]);
-    const o = portrait ? 'p' : 'l';
-    const poster = sceneMedia(id, o, 'jpg');
-    if (reduceMotion && !motionOverride) return <>
-        <img className="ft-bg ft-bgvideo" src={poster} alt="" aria-hidden="true" />
-        <button type="button" className="ft-motionplay" aria-label="Play background animation" onClick={() => setMotionOverride(true)}><SvgIcon d={ICON_PLAY} /></button>
-    </>;
+    }, [paused, animate, src]);
+    if (!animate) return <img className="ft-bg ft-bgvideo" src={poster} alt="" aria-hidden="true" />;
     return <>
         <img className="ft-bg ft-bgvideo" src={poster} alt="" aria-hidden="true" />
-        <video ref={ref} key={o} className="ft-bg ft-bgvideo" src={sceneMedia(id, o, 'mp4')} poster={poster} muted loop autoPlay playsInline preload="auto" aria-hidden="true" />
+        <video ref={ref} key={src} className="ft-bg ft-bgvideo" src={src} poster={poster} muted loop autoPlay playsInline preload="auto" aria-hidden="true" />
     </>;
 });
 
-const Background = React.memo(function Background({ kind, id, scrim, builtinSrc, linkBgUrl, uploadBgUrl, paused }: {
+interface BgMedia { url: string; kind: 'image' | 'video' }
+const Background = React.memo(function Background({ kind, id, scrim, builtinSrc, linkBg, uploadBg, paused, animate }: {
     kind: BgKind; id?: string; scrim: number;
-    builtinSrc: string | null; linkBgUrl: string | null; uploadBgUrl: string | null; paused?: boolean;
+    builtinSrc: string | null; linkBg: BgMedia | null; uploadBg: BgMedia | null; paused?: boolean; animate: boolean;
 }) {
     let style: React.CSSProperties = {};
     if (kind === 'builtin' && builtinSrc) style = { backgroundImage: `url(${builtinSrc})` };
     else if (kind === 'gradient') style = { backgroundImage: (GRADIENTS.find((g) => g.id === id) || GRADIENTS[0]).css };
-    else if (kind === 'link' && linkBgUrl) style = { backgroundImage: `url(${linkBgUrl})` };
-    else if (kind === 'upload' && uploadBgUrl) style = { backgroundImage: `url(${uploadBgUrl})` };
+    else if (kind === 'link' && linkBg?.kind === 'image') style = { backgroundImage: `url(${linkBg.url})` };
+    else if (kind === 'upload' && uploadBg?.kind === 'image') style = { backgroundImage: `url(${uploadBg.url})` };
     else if (kind === 'link' || kind === 'upload' || kind === 'builtin') style = { backgroundImage: GRADIENTS[0].css };
     const animId = ANIMATED_BGS.some((a) => a.id === id) ? id! : 'aurora';
+    const scene = kind === 'scene' ? [...SCENES, ...SCENES_EXTRA].find((s) => s.id === id) : undefined;
+    const linkVideo = kind === 'link' && linkBg?.kind === 'video' ? linkBg.url : kind === 'upload' && uploadBg?.kind === 'video' ? uploadBg.url : null;
     return <>
-        {kind === 'animated'
-            ? <div className={`ft-anim ft-anim-${animId}`} aria-hidden="true"><i /><i /><i /></div>
-            : kind === 'scene' && SCENES.some((s) => s.id === id)
-                ? <SceneVideo id={id!} paused={!!paused} />
-                : <div className="ft-bg" style={style} />}
+        {scene
+            ? <SceneVideo scene={scene} paused={!!paused} animate={animate} />
+            : linkVideo
+                ? <CustomVideo src={linkVideo} paused={!!paused} animate={animate} />
+                : kind === 'animated'
+                    ? <div className={`ft-anim ft-anim-${animId}`} aria-hidden="true"><i /><i /><i /></div>
+                    : <div className="ft-bg" style={style} />}
         <div className="ft-scrim" style={{ opacity: scrim }} />
     </>;
 });
 
-const SceneSwatch = React.memo(function SceneSwatch({ id, name, active, onPick }: { id: string; name: string; active: boolean; onPick: () => void }) {
-    return <button type="button" className={`ft-bgswatch ft-bgswatch-named ${active ? 'is-active' : ''}`} style={{ backgroundImage: `url(${sceneMedia(id, 'p', 'jpg')})` }} aria-label={`${name} animated scene`} onClick={onPick}><span className="ft-bgswatch-name">{name}</span></button>;
+const CustomVideo = React.memo(function CustomVideo({ src, paused, animate }: { src: string; paused: boolean; animate: boolean }) {
+    const ref = useRef<HTMLVideoElement | null>(null);
+    useEffect(() => {
+        const v = ref.current;
+        if (!v) return;
+        const sync = () => {
+            if (paused || !animate || document.hidden) v.pause();
+            else v.play().catch(() => { /* blocked */ });
+        };
+        sync();
+        const retry = () => { if (!paused && animate && !document.hidden) v.play().catch(() => { /* still blocked */ }); };
+        document.addEventListener('visibilitychange', sync);
+        window.addEventListener('pointerdown', retry);
+        return () => { document.removeEventListener('visibilitychange', sync); window.removeEventListener('pointerdown', retry); };
+    }, [paused, animate, src]);
+    if (!animate) return null;
+    return <video ref={ref} className="ft-bg ft-bgvideo" src={src} muted loop autoPlay playsInline preload="auto" aria-hidden="true" />;
+});
+
+const SceneSwatch = React.memo(function SceneSwatch({ scene, active, onPick }: { scene: SceneDef; active: boolean; onPick: () => void }) {
+    return <button type="button" className={`ft-bgswatch ft-bgswatch-named ${active ? 'is-active' : ''}`} aria-label={`${scene.name} animated scene`} onClick={onPick}>
+        <img className="ft-bgswatch-img" src={scenePoster(scene, 'p')} alt="" loading="lazy" decoding="async" />
+        <span className="ft-bgswatch-name">{scene.name}</span>
+    </button>;
 });
 
 const BgSwatch = React.memo(function BgSwatch({ id, name, active, onPick }: { id: string; name: string; active: boolean; onPick: () => void }) {
@@ -493,15 +526,16 @@ const BgSwatch = React.memo(function BgSwatch({ id, name, active, onPick }: { id
     return <button type="button" className={`ft-bgswatch ${active ? 'is-active' : ''}`} style={src ? { backgroundImage: `url(${src})` } : undefined} aria-label={name} onClick={onPick} />;
 });
 
-const TopBar = React.memo(function TopBar({ chip, panel, fullscreenSupported, onFullscreen, onTasks, onSettings, onMinimize }: {
+const TopBar = React.memo(function TopBar({ chip, panel, fullscreenSupported, onFullscreen, onTasks, onSettings, onMinimize, onPopout }: {
     chip: string | null; panel: 'none' | 'tasks' | 'settings'; fullscreenSupported: boolean;
-    onFullscreen: () => void; onTasks: () => void; onSettings: () => void; onMinimize: () => void;
+    onFullscreen: () => void; onTasks: () => void; onSettings: () => void; onMinimize: () => void; onPopout: () => void;
 }) {
     return <header className="ft-topbar">
         <span className="ft-brand">Study focus</span>
         {chip ? <span className="ft-chip" title="Today's completed focus time">{chip}</span> : null}
         <span className="ft-topbar-actions">
             {fullscreenSupported ? <button type="button" className="ft-iconbtn" aria-label="Fullscreen" onClick={onFullscreen}><SvgIcon d={ICON_FULLSCREEN} /></button> : null}
+            <button type="button" className="ft-iconbtn" aria-label="Open timer in its own window" title="Open timer in its own window" onClick={onPopout}><SvgIcon d={ICON_POPOUT} /></button>
             <button type="button" className="ft-iconbtn" aria-label="Minimize to a small timer" title="Minimize to a small timer" onClick={onMinimize}><SvgIcon d={ICON_MINIMIZE} /></button>
             <button type="button" className={`ft-iconbtn ${panel === 'tasks' ? 'is-active' : ''}`} aria-label="Tasks" onClick={onTasks}><SvgIcon d={ICON_TASKS} /></button>
             <button type="button" className={`ft-iconbtn ${panel === 'settings' ? 'is-active' : ''}`} aria-label="Settings" onClick={onSettings}><SvgIcon d={ICON_SETTINGS} /></button>
@@ -554,6 +588,38 @@ const TasksSheet = React.memo(function TasksSheet({ tasksState, setTasksState, w
         <p className="ft-field-hint">{savedMessage}</p>
     </aside>;
 });
+
+// Compact mirror rendered inside a ?popout=1 window: shows and controls the main tab's timer
+// over BroadcastChannel, so a second window never runs its own clock.
+function PopoutMirror() {
+    const [st, setSt] = useState<{ phase: Phase; remaining: number; running: boolean; dur: number; accent: string; at: number } | null>(null);
+    const [, forceTick] = useState(0);
+    const bcRef = useRef<BroadcastChannel | null>(null);
+    useEffect(() => {
+        const bc = new BroadcastChannel('sft-sync');
+        bcRef.current = bc;
+        bc.onmessage = (e) => { if (e.data?.t === 'state') setSt(e.data); };
+        const iv = window.setInterval(() => forceTick((n) => n + 1), 500);
+        return () => { window.clearInterval(iv); bc.close(); };
+    }, []);
+    const cmd = (c: string) => bcRef.current?.postMessage({ t: 'cmd', cmd: c });
+    // smooth the 1s broadcasts into a live countdown
+    let shown = st ? st.remaining : 0;
+    if (st?.running) shown = Math.max(0, st.remaining - (Date.now() - st.at));
+    const stale = !st || Date.now() - st.at > 4000;
+    const pct = st && st.dur > 0 ? Math.round((1 - shown / st.dur) * 100) : 0;
+    return <div className="ft-popout" style={{ ['--ft-accent' as string]: st?.accent || '#9fd8c6' } as React.CSSProperties}>
+        <div className="ft-popout-phase">{st ? PHASE_LABEL[st.phase] : 'Study focus'}</div>
+        <div className="ft-popout-time">{st ? fmt(shown) : '--:--'}</div>
+        <div className="ft-popout-bar" aria-hidden="true"><span style={{ width: `${pct}%` }} /></div>
+        <div className="ft-popout-btns">
+            <button type="button" className="ft-primary is-compact" onClick={() => cmd('toggle')}>{st?.running ? 'Pause' : 'Start'}</button>
+            <button type="button" className="ft-ghost is-compact" onClick={() => cmd('reset')}>Reset</button>
+            <button type="button" className="ft-ghost is-compact" onClick={() => cmd('skip')}>Skip</button>
+        </div>
+        {stale ? <p className="ft-popout-note">Open the study timer in another tab to control it from here.</p> : null}
+    </div>;
+}
 
 const SettingsSheet = React.memo(function SettingsSheet({ settings, patch, bgStatus, soundStatus, lastBgSrcRef, lastSndSrcRef, resolveLinkBg, resolveCustomSound, uploadBg, uploadSound, previewAlarm, requestNotifications, notificationsSupported, wakeLockSupported, onResetSettings, savedMessage, onClose }: {
     settings: Settings; patch: (part: Partial<Settings>) => void;
@@ -698,8 +764,15 @@ const SettingsSheet = React.memo(function SettingsSheet({ settings, patch, bgSta
             <h3>Background</h3>
             <h4 className="ft-subhead">Animated scenes</h4>
             <div className="ft-bggrid">
-                {SCENES.map((s) => <SceneSwatch key={s.id} id={s.id} name={s.name} active={bg.kind === 'scene' && bg.id === s.id} onPick={() => patch({ background: { kind: 'scene', id: s.id } })} />)}
+                {SCENES.map((s) => <SceneSwatch key={s.id} scene={s} active={bg.kind === 'scene' && bg.id === s.id} onPick={() => patch({ background: { kind: 'scene', id: s.id } })} />)}
             </div>
+            {SCENES_EXTRA.length ? <>
+                <h4 className="ft-subhead">More animated scenes</h4>
+                <div className="ft-bggrid">
+                    {SCENES_EXTRA.map((s) => <SceneSwatch key={s.id} scene={s} active={bg.kind === 'scene' && bg.id === s.id} onPick={() => patch({ background: { kind: 'scene', id: s.id } })} />)}
+                </div>
+            </> : null}
+            <Toggle label="Animate backgrounds" hint="Motion starts by itself. Turn off to show a still poster and save battery." checked={settings.bgAnimate !== false} onChange={(v) => patch({ bgAnimate: v })} />
             <h4 className="ft-subhead">Animated</h4>
             <div className="ft-bggrid">
                 {ANIMATED_BGS.map((a) => <button key={a.id} type="button" className={`ft-bgswatch ft-animsw ft-animsw-${a.id} ${bg.kind === 'animated' && bg.id === a.id ? 'is-active' : ''}`} aria-label={`${a.name} animated background`} onClick={() => patch({ background: { kind: 'animated', id: a.id } })} />)}
@@ -713,14 +786,14 @@ const SettingsSheet = React.memo(function SettingsSheet({ settings, patch, bgSta
                 {GRADIENTS.map((g) => <button key={g.id} type="button" className={`ft-bgswatch ${bg.kind === 'gradient' && bg.id === g.id ? 'is-active' : ''}`} style={{ backgroundImage: g.css }} aria-label={g.name} onClick={() => patch({ background: { kind: 'gradient', id: g.id } })} />)}
             </div>
             <div className="ft-field is-stacked">
-                <span className="ft-field-label">Pinterest or image link</span>
-                <span className="ft-field-hint">Paste a full public Pinterest pin link (pinterest.com/pin/…) or a direct image link. Saved links reload each visit. When a direct load is blocked, the link you paste is fetched through a public image relay (weserv.nl), so never use private boards or private image URLs.</span>
+                <span className="ft-field-label">Pinterest, image or video link</span>
+                <span className="ft-field-hint">Paste a full public Pinterest pin link (pinterest.com/pin/…), a direct image link (JPG, PNG, GIF) or a direct video link (mp4, webm). Anything you add is fitted to fill the screen, cropped to match its own shape, never stretched. Saved links reload each visit. When a direct image load is blocked, the link you paste is fetched through a public image relay (weserv.nl), so never use private boards or private URLs.</span>
                 <span className="ft-inrow">
                     <input className="ft-textinput" value={bgInput} placeholder="https://www.pinterest.com/pin/…" onChange={(e) => setBgInput(e.target.value)} inputMode="url" />
                     <button type="button" className="ft-ghost is-compact" onClick={applyBgLink}>Use link</button>
                 </span>
                 <span className="ft-inrow">
-                    <label className="ft-ghost is-compact ft-filebtn">Upload image<input type="file" accept="image/*" aria-label="Upload background image file" className="ft-fileinput" onChange={(e) => uploadBg(e.target.files?.[0])} /></label>
+                    <label className="ft-ghost is-compact ft-filebtn">Upload image or video<input type="file" accept="image/*,video/*" aria-label="Upload background image or video file" className="ft-fileinput" onChange={(e) => uploadBg(e.target.files?.[0])} /></label>
                     <span className="ft-field-hint">Lasts until the tab reloads.</span>
                 </span>
                 {bgStatus ? <span className="ft-field-hint">{bgStatus}</span> : null}
@@ -740,6 +813,12 @@ const SettingsSheet = React.memo(function SettingsSheet({ settings, patch, bgSta
 });
 
 export function App() {
+    // A window opened with ?popout=1 is a remote display for the main tab, not a second timer.
+    if (typeof window !== 'undefined' && /[?&]popout=1/.test(window.location.search)) return <PopoutMirror />;
+    return <MainApp />;
+}
+
+function MainApp() {
     const [settings, setSettings, settingsSaved] = useLocalState<Settings>('ft-settings.v2', DEFAULT_SETTINGS);
     const [tasksState, setTasksState, tasksSaved] = useLocalState<TasksState>('ft-tasks.v1', { tasks: [], activeId: null });
     const [stats, setStats, statsSaved] = useLocalState<StatsState>('ft-stats.v1', { days: {} });
@@ -760,10 +839,12 @@ export function App() {
     phaseRef.current = phase;
     const remainingRef = useRef(remaining);
     remainingRef.current = remaining;
+    const settingsRef = useRef(settings.accent);
+    settingsRef.current = settings.accent;
 
     // resolved custom media (object URLs, session-scoped)
-    const [linkBgUrl, setLinkBgUrl] = useState<string | null>(null);
-    const [uploadBgUrl, setUploadBgUrl] = useState<string | null>(null);
+    const [linkBg, setLinkBg] = useState<BgMedia | null>(null);
+    const [uploadBgMedia, setUploadBgMedia] = useState<BgMedia | null>(null);
     const [builtinSrc, setBuiltinSrc] = useState<string | null>(null);
     const [bgStatus, setBgStatus] = useState('');
     const [customAudioUrl, setCustomAudioUrl] = useState<string | null>(null);
@@ -777,8 +858,19 @@ export function App() {
     const resolveLinkBg = useCallback(async (source: string): Promise<boolean> => {
         setBgStatus('Loading background…');
         try {
+            const trimmed = source.trim();
+            // Direct video links play cross-origin in a <video> element without a fetch.
+            if (/\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(trimmed) && !/pin(it)?\./i.test(trimmed)) {
+                setLinkBg((old) => { if (old && old.url.startsWith('blob:')) URL.revokeObjectURL(old.url); return { url: trimmed, kind: 'video' }; });
+                setBgStatus('Background applied.');
+                return true;
+            }
             const blob = await resolveImageSource(source);
-            setLinkBgUrl((old) => { if (old) URL.revokeObjectURL(old); return URL.createObjectURL(blob); });
+            if (blob.type.startsWith('video/')) {
+                setLinkBg((old) => { if (old && old.url.startsWith('blob:')) URL.revokeObjectURL(old.url); return { url: URL.createObjectURL(blob), kind: 'video' }; });
+            } else {
+                setLinkBg((old) => { if (old && old.url.startsWith('blob:')) URL.revokeObjectURL(old.url); return { url: URL.createObjectURL(blob), kind: 'image' }; });
+            }
             setBgStatus('Background applied.');
             return true;
         } catch (err) {
@@ -844,7 +936,7 @@ export function App() {
     // Normalize any older saved settings shape with the current defaults.
     useEffect(() => {
         if (!settingsSaved.ready) return;
-        if (!settings.accent || !settings.font || !settings.clockStyle || !settings.clockSize || typeof settings.showDots !== 'boolean' || typeof settings.spotifyOpen !== 'boolean' || settings.spotify === undefined) {
+        if (!settings.accent || !settings.font || !settings.clockStyle || !settings.clockSize || typeof settings.showDots !== 'boolean' || typeof settings.spotifyOpen !== 'boolean' || settings.spotify === undefined || typeof settings.bgAnimate !== 'boolean') {
             setSettings((prev) => ({ ...DEFAULT_SETTINGS, ...prev }));
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -898,6 +990,7 @@ export function App() {
     }, [sessionSaved.ready]);
 
     // ---------- timer core ----------
+    const phaseStashRef = useRef<Partial<Record<Phase, number>>>({});
     const durationsRef = useRef(durations);
     durationsRef.current = durations;
 
@@ -930,6 +1023,7 @@ export function App() {
         if (settings.notifications && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
             try { new Notification(`${PHASE_LABEL[finished]} finished`, { body: next === 'focus' ? 'Time to focus.' : `Time for a ${PHASE_LABEL[next].toLowerCase()}.` }); } catch { /* unsupported */ }
         }
+        delete phaseStashRef.current[finished];
         setPhase(next);
         setRemaining(durationsRef.current[next]);
         const shouldAuto = next === 'focus' ? settings.autoFocus : settings.autoBreaks;
@@ -959,11 +1053,14 @@ export function App() {
         return () => window.clearInterval(iv);
     }, [running]);
 
-    // keep display in sync when durations change while idle
+    // keep display in sync when durations are edited while idle (phase switches preserve progress instead)
     useEffect(() => {
-        if (!runningRef.current) setRemaining(durations[phase]);
+        if (!runningRef.current) {
+            delete phaseStashRef.current[phaseRef.current];
+            setRemaining(durations[phaseRef.current]);
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [durations, phase]);
+    }, [durations]);
 
     // ticking sound
     const lastTickRef = useRef(0);
@@ -1012,6 +1109,9 @@ export function App() {
     }, [customAudioUrl]);
 
     // ---------- actions ----------
+    const startRef = useRef(() => {});
+    const pauseRef = useRef(() => {});
+    const resetFnRef = useRef(() => {});
     const start = useCallback(() => {
         audioCtx();
         if (customAudioRef.current) { try { customAudioRef.current.pause(); customAudioRef.current.currentTime = 0; } catch { /* ignore */ } }
@@ -1020,12 +1120,76 @@ export function App() {
         persistSession({ phase: phaseRef.current, running: true, endAt: endAtRef.current, remainingMs: remainingRef.current, cycleCount });
     }, [persistSession, cycleCount]);
     const pause = useCallback(() => { setRunning(false); persistSession({ phase: phaseRef.current, running: false, remainingMs: remainingRef.current, cycleCount }); }, [persistSession, cycleCount]);
-    const reset = useCallback(() => { setRunning(false); setRemaining(durationsRef.current[phaseRef.current]); persistSession({ phase: phaseRef.current, running: false, remainingMs: durationsRef.current[phaseRef.current], cycleCount }); }, [persistSession, cycleCount]);
+    const reset = useCallback(() => { delete phaseStashRef.current[phaseRef.current]; setRunning(false); setRemaining(durationsRef.current[phaseRef.current]); persistSession({ phase: phaseRef.current, running: false, remainingMs: durationsRef.current[phaseRef.current], cycleCount }); }, [persistSession, cycleCount]);
     const skip = useCallback(() => { completePhaseRef.current(true); }, []);
-    const switchPhase = useCallback((p: Phase) => { setRunning(false); setPhase(p); setRemaining(durationsRef.current[p]); persistSession({ phase: p, running: false, remainingMs: durationsRef.current[p], cycleCount }); }, [persistSession, cycleCount]);
+    startRef.current = start;
+    pauseRef.current = pause;
+    resetFnRef.current = reset;
+    // Switching focus/short/long never wipes progress: the phase you leave keeps its remaining
+    // time, and switching back resumes it. Reset, Skip or a finished session clear it.
+    const switchPhase = useCallback((p: Phase) => {
+        const cur = phaseRef.current;
+        if (p === cur) return;
+        const left = runningRef.current ? Math.max(0, endAtRef.current - Date.now()) : remainingRef.current;
+        if (left > 0 && left < durationsRef.current[cur]) phaseStashRef.current[cur] = left;
+        else delete phaseStashRef.current[cur];
+        const saved = phaseStashRef.current[p];
+        const nextRemaining = typeof saved === 'number' && saved > 0 ? Math.min(saved, durationsRef.current[p]) : durationsRef.current[p];
+        setRunning(false);
+        setPhase(p);
+        setRemaining(nextRemaining);
+        persistSession({ phase: p, running: false, remainingMs: nextRemaining, cycleCount });
+    }, [persistSession, cycleCount]);
     const toggleFullscreen = useCallback(() => {
         if (document.fullscreenElement) void document.exitFullscreen().catch(() => { /* ignore */ });
         else void document.documentElement.requestFullscreen().catch(() => { /* blocked */ });
+    }, []);
+
+    // ---------- timer in its own window ----------
+    // Chrome/Edge desktop: Document Picture-in-Picture gives a small always-on-top window with no
+    // address bar or bookmarks, rendered straight from this tab (no second clock). Other browsers:
+    // a plain popup window with minimal browser UI that mirrors this tab over BroadcastChannel.
+    const [pipWin, setPipWin] = useState<Window | null>(null);
+    const popOut = useCallback(() => {
+        const dpi = (window as any).documentPictureInPicture;
+        if (dpi?.requestWindow) {
+            dpi.requestWindow({ width: 320, height: 200 }).then((w: Window) => {
+                for (const ss of Array.from(document.styleSheets)) {
+                    try {
+                        const css = Array.from(ss.cssRules || []).map((r) => r.cssText).join('\n');
+                        const st = w.document.createElement('style');
+                        st.textContent = css;
+                        w.document.head.appendChild(st);
+                    } catch {
+                        const href = (ss as CSSStyleSheet).href;
+                        if (href) { const l = w.document.createElement('link'); l.rel = 'stylesheet'; l.href = href; w.document.head.appendChild(l); }
+                    }
+                }
+                w.document.body.className = 'ft-pip-body';
+                w.addEventListener('pagehide', () => setPipWin(null));
+                setPipWin(w);
+            }).catch(() => { /* user dismissed the picker */ });
+            return;
+        }
+        window.open(`${window.location.pathname}?popout=1`, 'sft-popout', 'popup=yes,width=360,height=240');
+    }, []);
+
+    // Broadcast timer state for any ?popout=1 window; accept its commands. Runs once per tab.
+    useEffect(() => {
+        if (typeof BroadcastChannel === 'undefined') return;
+        const bc = new BroadcastChannel('sft-sync');
+        const send = () => bc.postMessage({ t: 'state', phase: phaseRef.current, remaining: remainingRef.current, running: runningRef.current, dur: durationsRef.current[phaseRef.current], accent: settingsRef.current, at: Date.now() });
+        send();
+        const iv = window.setInterval(send, 1000);
+        bc.onmessage = (e) => {
+            const m = e.data;
+            if (m?.t !== 'cmd') return;
+            if (m.cmd === 'toggle') { if (runningRef.current) pauseRef.current(); else startRef.current(); }
+            else if (m.cmd === 'reset') resetFnRef.current();
+            else if (m.cmd === 'skip') completePhaseRef.current(true);
+        };
+        return () => { window.clearInterval(iv); bc.close(); };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
     const minimize = useCallback(() => { setPanel('none'); setCompact(true); }, []);
     const showTasksPanel = panel === 'tasks';
@@ -1057,10 +1221,11 @@ export function App() {
     // ---------- media upload / preview actions ----------
     const uploadBg = useCallback((file: File | undefined) => {
         if (!file) return;
-        if (!file.type.startsWith('image/')) { setBgStatus('That file is not an image.'); return; }
-        setUploadBgUrl((old) => { if (old) URL.revokeObjectURL(old); return URL.createObjectURL(file); });
+        const isVideo = file.type.startsWith('video/');
+        if (!isVideo && !file.type.startsWith('image/')) { setBgStatus('That file is not an image or video.'); return; }
+        setUploadBgMedia((old) => { if (old) URL.revokeObjectURL(old.url); return { url: URL.createObjectURL(file), kind: isVideo ? 'video' : 'image' }; });
         patch({ background: { kind: 'upload' } });
-        setBgStatus('Background applied for this visit. Use a Pinterest or image link to keep it across visits.');
+        setBgStatus('Background applied for this visit. Use a link to keep it across visits.');
     }, [patch]);
     const uploadSound = useCallback((file: File | undefined) => {
         if (!file) return;
@@ -1128,9 +1293,9 @@ export function App() {
     const spotifySrc = settings.spotify ? spotifyEmbedUrl(settings.spotify) : null;
 
     return <div className={`ft-root ${compact ? 'is-compact' : ''}`} style={{ ['--ft-accent' as string]: settings.accent, ['--ft-font' as string]: fontCss } as React.CSSProperties}>
-        <Background kind={bg.kind} id={bg.id} scrim={settings.scrim} builtinSrc={builtinSrc} linkBgUrl={linkBgUrl} uploadBgUrl={uploadBgUrl} paused={compact} />
+        <Background kind={bg.kind} id={bg.id} scrim={settings.scrim} builtinSrc={builtinSrc} linkBg={linkBg} uploadBg={uploadBgMedia} paused={compact} animate={settings.bgAnimate !== false} />
 
-        <TopBar chip={chip} panel={panel} fullscreenSupported={fullscreenSupported} onFullscreen={toggleFullscreen} onTasks={toggleTasks} onSettings={toggleSettings} onMinimize={minimize} />
+        <TopBar chip={chip} panel={panel} fullscreenSupported={fullscreenSupported} onFullscreen={toggleFullscreen} onTasks={toggleTasks} onSettings={toggleSettings} onMinimize={minimize} onPopout={popOut} />
 
         <main className="ft-center">
             <nav className="ft-modes" aria-label="Timer mode">
@@ -1184,6 +1349,17 @@ export function App() {
             onClose={() => setPanel('none')}
         /> : null}
 
+        {pipWin ? createPortal(<div className="ft-pip">
+            <div className="ft-pip-phase">{PHASE_LABEL[phase]}</div>
+            <div className="ft-pip-time">{fmt(remaining)}</div>
+            <div className="ft-pip-bar" aria-hidden="true"><span style={{ width: `${Math.round(progress * 100)}%` }} /></div>
+            <div className="ft-pip-btns">
+                <button type="button" className="ft-primary is-compact" onClick={() => (running ? pause() : start())}>{running ? 'Pause' : 'Start'}</button>
+                <button type="button" className="ft-ghost is-compact" onClick={reset}>Reset</button>
+                <button type="button" className="ft-ghost is-compact" onClick={skip}>Skip</button>
+            </div>
+        </div>, pipWin.document.body) : null}
+
         {spotifySrc ? <div className={`ft-spotify ${settings.spotifyOpen ? 'is-open' : ''}`}>
             <div className="ft-spotify-frame" aria-hidden={!settings.spotifyOpen}>
                 <iframe src={spotifySrc} width="100%" height="152" frameBorder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" title="Spotify player" />
@@ -1193,4 +1369,4 @@ export function App() {
             </button>
         </div> : null}
     </div>;
-        }
+                              }
