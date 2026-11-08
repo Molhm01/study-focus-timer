@@ -33,7 +33,7 @@ function useLocalState<T>(key: string, initial: T): [T, (v: T | ((prev: T) => T)
     return [value, set, { ready, message }];
 }
 
-const IMAGE_PARTS: Record<string,string[]> = {"longer":["images/images/longer-0.txt", "images/images/longer-1.txt", "images/images/longer-2.txt", "images/images/longer-3.txt", "images/images/longer-4.txt", "images/images/longer-5.txt"],"curated":["images/images/curated-0.txt"],"rain": ["images/images/rain-0.txt", "images/images/rain-1.txt"], "thumb-rain": ["images/images/thumb-rain-0.txt"], "library": ["images/images/library-0.txt", "images/images/library-1.txt", "images/images/library-2.txt", "images/images/library-3.txt", "images/images/library-4.txt"], "thumb-library": ["images/images/thumb-library-0.txt"], "coffee": ["images/images/coffee-0.txt", "images/images/coffee-1.txt", "images/images/coffee-2.txt"], "thumb-coffee": ["images/images/thumb-coffee-0.txt"], "desk": ["images/images/desk-0.txt", "images/images/desk-1.txt", "images/images/desk-2.txt"], "thumb-desk": ["images/images/thumb-desk-0.txt"], "mountains": ["images/images/mountains-0.txt", "images/images/mountains-1.txt", "images/images/mountains-2.txt", "images/images/mountains-3.txt", "images/images/mountains-4.txt", "images/images/mountains-5.txt"], "thumb-mountains": ["images/images/thumb-mountains-0.txt"], "forest": ["images/images/forest-0.txt", "images/images/forest-1.txt", "images/images/forest-2.txt", "images/images/forest-3.txt"], "thumb-forest": ["images/images/thumb-forest-0.txt"], "stars": ["images/images/stars-0.txt"], "thumb-stars": ["images/images/thumb-stars-0.txt"], "ocean": ["images/images/ocean-0.txt", "images/images/ocean-1.txt", "images/images/ocean-2.txt"], "thumb-ocean": ["images/images/thumb-ocean-0.txt"], "catalog": ["images/images/catalog-0.txt", "images/images/catalog-1.txt", "images/images/catalog-2.txt", "images/images/catalog-3.txt", "images/images/catalog-4.txt", "images/images/catalog-5.txt", "images/images/catalog-6.txt"]};
+const IMAGE_PARTS: Record<string,string[]> = {"v2cat":["images/images/v2cat-0.txt", "images/images/v2cat-1.txt"],"longer":["images/images/longer-0.txt", "images/images/longer-1.txt", "images/images/longer-2.txt", "images/images/longer-3.txt", "images/images/longer-4.txt", "images/images/longer-5.txt"],"curated":["images/images/curated-0.txt"],"rain": ["images/images/rain-0.txt", "images/images/rain-1.txt"], "thumb-rain": ["images/images/thumb-rain-0.txt"], "library": ["images/images/library-0.txt", "images/images/library-1.txt", "images/images/library-2.txt", "images/images/library-3.txt", "images/images/library-4.txt"], "thumb-library": ["images/images/thumb-library-0.txt"], "coffee": ["images/images/coffee-0.txt", "images/images/coffee-1.txt", "images/images/coffee-2.txt"], "thumb-coffee": ["images/images/thumb-coffee-0.txt"], "desk": ["images/images/desk-0.txt", "images/images/desk-1.txt", "images/images/desk-2.txt"], "thumb-desk": ["images/images/thumb-desk-0.txt"], "mountains": ["images/images/mountains-0.txt", "images/images/mountains-1.txt", "images/images/mountains-2.txt", "images/images/mountains-3.txt", "images/images/mountains-4.txt", "images/images/mountains-5.txt"], "thumb-mountains": ["images/images/thumb-mountains-0.txt"], "forest": ["images/images/forest-0.txt", "images/images/forest-1.txt", "images/images/forest-2.txt", "images/images/forest-3.txt"], "thumb-forest": ["images/images/thumb-forest-0.txt"], "stars": ["images/images/stars-0.txt"], "thumb-stars": ["images/images/thumb-stars-0.txt"], "ocean": ["images/images/ocean-0.txt", "images/images/ocean-1.txt", "images/images/ocean-2.txt"], "thumb-ocean": ["images/images/thumb-ocean-0.txt"], "catalog": ["images/images/catalog-0.txt", "images/images/catalog-1.txt", "images/images/catalog-2.txt", "images/images/catalog-3.txt", "images/images/catalog-4.txt", "images/images/catalog-5.txt", "images/images/catalog-6.txt"]};
 const imagePromises: Record<string,Promise<string>> = {};
 function imageUrl(id:string):Promise<string> { return imagePromises[id] ||= Promise.all(IMAGE_PARTS[id].map(async path=>{const r=await fetch(path);if(!r.ok)throw Error('Image unavailable');return r.text()})).then(parts=>'data:image/jpeg;base64,'+parts.join('').replace(/\s/g,'')); }
 function useImageUrl(id:string) {const [url,setUrl]=useState('');useEffect(()=>{let live=true;imageUrl(id).then(x=>{if(live)setUrl(x)}).catch(()=>{});return()=>{live=false}},[id]);return url;}
@@ -135,216 +135,23 @@ const ANIMATED_BGS = [
     { id: 'rainfall', name: 'Rain streaks' },
 ];
 
-// Animated source videos stream only when selected. Picker previews are composed, labelled atlases.
-// New longer scenes preserve their native wide composition with dark margins where needed.
-// Sources: Pixabay Content License video embeddings; source links and notices in README. No Mixkit assets.
-interface SceneDef { id: string; name: string; url?: string; tile?: number; preview?: string; duration?: number; poster?: string }
+// Animated source videos stream directly from Pixabay's CDN only when selected (embedding allowed per Pixabay API terms). Picker previews are one small composed atlas.
+// Illustrated scenes are drawn as seamless loops and hard-loop natively. Photographed scenes are near-static compositions with continuous water/fog motion; their wrap is covered by a short crossfade (blend: true), not claimed to be seamless.
+// Sources: Pixabay Content License video embeddings; source links and notices in README. No self-hosted video files.
+interface SceneDef { id: string; name: string; url?: string; tile?: number; preview?: string; duration?: number; poster?: string; blend?: boolean }
 const SCENES: SceneDef[] = [
-    {"id": "shrine", "name": "Moonlit shrine", "url": "https://cdn.pixabay.com/video/2026/04/22/348164_large.mp4", "tile": 0, "preview": "curated", "duration": 5.0},
-    {"id": "rainy-window", "name": "Rainy window", "url": "https://cdn.pixabay.com/video/2026/09/15/376433_medium.mp4", "tile": 1, "preview": "curated", "duration": 8.0},
-    {"id": "misty-river", "name": "Misty river", "url": "https://cdn.pixabay.com/video/2026/04/05/344726_medium.mp4", "tile": 2, "preview": "curated", "duration": 24.0},
-    {"id": "water-garden", "name": "Water garden", "url": "https://cdn.pixabay.com/video/2025/07/12/290959_medium.mp4", "tile": 3, "preview": "curated", "duration": 9.633333},
-    {"id": "sakura-night", "name": "Island moon", "url": "https://cdn.pixabay.com/video/2023/03/22/155672-810706799_large.mp4", "tile": 4, "preview": "curated", "duration": 60.116667},
-    {"id": "night-train", "name": "Night train", "url": "https://cdn.pixabay.com/video/2025/10/23/311602_medium.mp4", "tile": 5, "preview": "curated", "duration": 64.0},
-    {"id": "cozy-window", "name": "Rainy desk", "url": "https://cdn.pixabay.com/video/2026/09/13/376049_large.mp4", "tile": 7, "preview": "curated", "duration": 6.0},
-    {"id": "balcony-dusk", "name": "Evening balcony", "url": "https://cdn.pixabay.com/video/2026/09/15/376434_medium.mp4", "tile": 8, "preview": "curated", "duration": 8.0},
-];
-const SCENES_LONG: SceneDef[] = [
-    {"id": "long-215407", "name": "Rainy study window", "url": "https://cdn.pixabay.com/video/2024/06/05/215407_medium.mp4", "tile": 0, "preview": "longer", "duration": 60.093367},
-    {"id": "long-297863", "name": "Rainlit reading nook", "url": "https://cdn.pixabay.com/video/2025/08/17/297863_medium.mp4", "tile": 1, "preview": "longer", "duration": 64.0},
-    {"id": "long-265906", "name": "Neon rainy lounge", "url": "https://cdn.pixabay.com/video/2025/03/19/265906_medium.mp4", "tile": 2, "preview": "longer", "duration": 60.0},
-    {"id": "long-276498", "name": "Night desk journal", "url": "https://cdn.pixabay.com/video/2025/05/03/276498_medium.mp4", "tile": 3, "preview": "longer", "duration": 52.066667},
-    {"id": "long-311563", "name": "Umbrella city", "url": "https://cdn.pixabay.com/video/2025/10/23/311563_medium.mp4", "tile": 4, "preview": "longer", "duration": 61.166667},
-    {"id": "long-180170", "name": "Neon alley puddles", "url": "https://cdn.pixabay.com/video/2023/09/11/180170-863654648_medium.mp4", "tile": 5, "preview": "longer", "duration": 24.875},
-    {"id": "long-229537", "name": "Moonlit river window", "url": "https://cdn.pixabay.com/video/2024/09/03/229537_medium.mp4", "tile": 6, "preview": "longer", "duration": 30.03},
-    {"id": "long-211097", "name": "Cabin porch fire", "url": "https://cdn.pixabay.com/video/2024/05/07/211097_medium.mp4", "tile": 7, "preview": "longer", "duration": 30.0},
-    {"id": "long-246535", "name": "Window cat at dusk", "url": "https://cdn.pixabay.com/video/2024/12/13/246535_medium.mp4", "tile": 8, "preview": "longer", "duration": 58.5585},
-    {"id": "long-246241", "name": "Rainy sofa cat", "url": "https://cdn.pixabay.com/video/2024/12/11/246241_medium.mp4", "tile": 9, "preview": "longer", "duration": 75.341933},
-    {"id": "long-204116", "name": "Firelit cabin", "url": "https://cdn.pixabay.com/video/2024/03/14/204116-923594064_medium.mp4", "tile": 10, "preview": "longer", "duration": 30.0},
-    {"id": "long-248668", "name": "Lavender lounge", "url": "https://cdn.pixabay.com/video/2024/12/25/248668_medium.mp4", "tile": 11, "preview": "longer", "duration": 20.0},
-    {"id": "long-371447", "name": "City cat companion", "url": "https://cdn.pixabay.com/video/2026/08/19/371447_medium.mp4", "tile": 12, "preview": "longer", "duration": 60.165704},
-    {"id": "long-379222", "name": "City blues", "url": "https://cdn.pixabay.com/video/2026/09/27/379222_medium.mp4", "tile": 13, "preview": "longer", "duration": 20.1201},
-    {"id": "long-345856", "name": "Sleepy desk cat", "url": "https://cdn.pixabay.com/video/2026/04/11/345856_medium.mp4", "tile": 14, "preview": "longer", "duration": 64.0},
-    {"id": "long-312345", "name": "Lamp and sleeping cat", "url": "https://cdn.pixabay.com/video/2025/10/27/312345_medium.mp4", "tile": 15, "preview": "longer", "duration": 64.0},
-    {"id": "long-271841", "name": "Rainy study companion", "url": "https://cdn.pixabay.com/video/2025/04/13/271841_medium.mp4", "tile": 16, "preview": "longer", "duration": 67.8},
-    {"id": "long-297736", "name": "Rooftop study", "url": "https://cdn.pixabay.com/video/2025/08/16/297736_medium.mp4", "tile": 17, "preview": "longer", "duration": 72.0},
-    {"id": "long-246242", "name": "Sleeping hearth cat", "url": "https://cdn.pixabay.com/video/2024/12/11/246242_medium.mp4", "tile": 18, "preview": "longer", "duration": 58.691967},
-    {"id": "long-246243", "name": "Dusk window cat", "url": "https://cdn.pixabay.com/video/2024/12/11/246243_medium.mp4", "tile": 19, "preview": "longer", "duration": 76.709967},
-    {"id": "long-202823", "name": "Candlelit library", "url": "https://cdn.pixabay.com/video/2024/03/03/202823-919000176_medium.mp4", "tile": 20, "preview": "longer", "duration": 30.0},
-    {"id": "long-75368", "name": "Old-town rain", "url": "https://cdn.pixabay.com/video/2021/05/26/75368-555547951_medium.mp4", "tile": 21, "preview": "longer", "duration": 32.873333},
-    {"id": "long-38271", "name": "Storm at sea", "url": "https://cdn.pixabay.com/video/2020/05/06/38271-415950897_medium.mp4", "tile": 22, "preview": "longer", "duration": 58.516667},
-    {"id": "long-360380", "name": "Library afternoon", "url": "https://cdn.pixabay.com/video/2026/06/23/360380_medium.mp4", "tile": 23, "preview": "longer", "duration": 22.208333},
-    {"id": "long-310025", "name": "Night study wall", "url": "https://cdn.pixabay.com/video/2025/10/15/310025_medium.mp4", "tile": 24, "preview": "longer", "duration": 64.0},
-    {"id": "long-330062", "name": "City laptop glow", "url": "https://cdn.pixabay.com/video/2026/01/24/330062_medium.mp4", "tile": 25, "preview": "longer", "duration": 63.533333},
-    {"id": "long-345838", "name": "Library dog", "url": "https://cdn.pixabay.com/video/2026/04/11/345838_medium.mp4", "tile": 26, "preview": "longer", "duration": 61.4},
-    {"id": "long-211089", "name": "Autumn porch", "url": "https://cdn.pixabay.com/video/2024/05/07/211089_medium.mp4", "tile": 27, "preview": "longer", "duration": 30.0},
-    {"id": "long-301247", "name": "Retro train cat", "url": "https://cdn.pixabay.com/video/2025/09/02/301247_medium.mp4", "tile": 28, "preview": "longer", "duration": 29.866667},
-    {"id": "long-208856", "name": "Cottage candlelight", "url": "https://cdn.pixabay.com/video/2024/04/21/208856_medium.mp4", "tile": 29, "preview": "longer", "duration": 30.0},
-    {"id": "long-257953", "name": "Rainy woodland lounge", "url": "https://cdn.pixabay.com/video/2025/02/13/257953_medium.mp4", "tile": 30, "preview": "longer", "duration": 30.03},
-    {"id": "long-258729", "name": "Red rainy room", "url": "https://cdn.pixabay.com/video/2025/02/17/258729_medium.mp4", "tile": 31, "preview": "longer", "duration": 30.03},
-    {"id": "long-251562", "name": "Ancient forest", "url": "https://cdn.pixabay.com/video/2025/01/09/251562_medium.mp4", "tile": 32, "preview": "longer", "duration": 60.266667},
-    {"id": "long-243696", "name": "Mountain lodge window", "url": "https://cdn.pixabay.com/video/2024/11/28/243696_medium.mp4", "tile": 33, "preview": "longer", "duration": 30.0},
-    {"id": "long-247096", "name": "Classic hearth room", "url": "https://cdn.pixabay.com/video/2024/12/17/247096_medium.mp4", "tile": 34, "preview": "longer", "duration": 30.0},
-    {"id": "long-168104", "name": "Moonlit lounge", "url": "https://cdn.pixabay.com/video/2023/06/20/168104-838533643_medium.mp4", "tile": 35, "preview": "longer", "duration": 60.06},
-    {"id": "long-205001", "name": "Candlelit studio", "url": "https://cdn.pixabay.com/video/2024/03/21/205001-926015670_medium.mp4", "tile": 36, "preview": "longer", "duration": 30.058333},
-    {"id": "long-182592", "name": "Round-door library", "url": "https://cdn.pixabay.com/video/2023/09/27/182592-868916643_medium.mp4", "tile": 37, "preview": "longer", "duration": 39.833333},
-    {"id": "long-166272", "name": "Ember-lit room", "url": "https://cdn.pixabay.com/video/2023/06/08/166272-834580690_medium.mp4", "tile": 38, "preview": "longer", "duration": 60.116667},
-    {"id": "long-120583", "name": "Rainy bedroom", "url": "https://cdn.pixabay.com/video/2022/06/17/120583-721287175_medium.mp4", "tile": 39, "preview": "longer", "duration": 29.631667},
-    {"id": "long-236040", "name": "Mountain lake bedroom", "url": "https://cdn.pixabay.com/video/2024/10/12/236040_medium.mp4", "tile": 40, "preview": "longer", "duration": 30.03},
-    {"id": "long-181971", "name": "Hilltop sunset", "url": "https://cdn.pixabay.com/video/2023/09/23/181971-867576062_medium.mp4", "tile": 41, "preview": "longer", "duration": 60.06},
-    {"id": "long-259293", "name": "Round-door fire", "url": "https://cdn.pixabay.com/video/2025/02/18/259293_medium.mp4", "tile": 42, "preview": "longer", "duration": 30.03},
-    {"id": "long-253904", "name": "Snowy city window", "url": "https://cdn.pixabay.com/video/2025/01/22/253904_medium.mp4", "tile": 43, "preview": "longer", "duration": 60.0},
-    {"id": "long-267347", "name": "Sunset city lounge", "url": "https://cdn.pixabay.com/video/2025/03/25/267347_medium.mp4", "tile": 44, "preview": "longer", "duration": 60.0},
-    {"id": "long-208105", "name": "Forest library", "url": "https://cdn.pixabay.com/video/2024/04/15/208105_medium.mp4", "tile": 45, "preview": "longer", "duration": 30.0},
-    {"id": "long-156473", "name": "Rainy sunset room", "url": "https://cdn.pixabay.com/video/2023/03/28/156473-812592018_medium.mp4", "tile": 46, "preview": "longer", "duration": 60.138333},
-    {"id": "long-201968", "name": "Fireside tabby", "url": "https://cdn.pixabay.com/video/2024/02/25/201968-916877887_medium.mp4", "tile": 47, "preview": "longer", "duration": 30.08},
-    {"id": "long-108292", "name": "Victorian fire", "url": "https://cdn.pixabay.com/video/2022/02/20/108292-680195115_medium.mp4", "tile": 48, "preview": "longer", "duration": 60.01},
-    {"id": "long-201179", "name": "Rainy mountain retreat", "url": "https://cdn.pixabay.com/video/2024/02/20/201179-914924544_medium.mp4", "tile": 49, "preview": "longer", "duration": 58.123333},
-    {"id": "long-208621", "name": "Blue mountain bedroom", "url": "https://cdn.pixabay.com/video/2024/04/19/208621_medium.mp4", "tile": 50, "preview": "longer", "duration": 20.04},
-    {"id": "long-204238", "name": "Sunlit bookcase", "url": "https://cdn.pixabay.com/video/2024/03/15/204238-923909572_medium.mp4", "tile": 51, "preview": "longer", "duration": 31.978333},
-    {"id": "long-205644", "name": "Warm timber library", "url": "https://cdn.pixabay.com/video/2024/03/25/205644-927347938_medium.mp4", "tile": 52, "preview": "longer", "duration": 30.0},
-    {"id": "long-205634", "name": "Indoor garden library", "url": "https://cdn.pixabay.com/video/2024/03/25/205634-927347905_medium.mp4", "tile": 53, "preview": "longer", "duration": 30.0},
-    {"id": "long-209220", "name": "Snowy fireplace bedroom", "url": "https://cdn.pixabay.com/video/2024/04/24/209220_medium.mp4", "tile": 54, "preview": "longer", "duration": 30.0},
-    {"id": "long-337559", "name": "Rainy high-rise", "url": "https://cdn.pixabay.com/video/2026/03/02/337559_medium.mp4", "tile": 55, "preview": "longer", "duration": 64.8},
-    {"id": "long-210278", "name": "Quiet bookshelf nook", "url": "https://cdn.pixabay.com/video/2024/05/01/210278_medium.mp4", "tile": 56, "preview": "longer", "duration": 30.0},
-    {"id": "long-219025", "name": "Sunlit mountain lounge", "url": "https://cdn.pixabay.com/video/2024/07/01/219025_medium.mp4", "tile": 57, "preview": "longer", "duration": 30.03},
-    {"id": "long-267920", "name": "Classic book room", "url": "https://cdn.pixabay.com/video/2025/03/27/267920_medium.mp4", "tile": 58, "preview": "longer", "duration": 30.03},
-    {"id": "long-208089", "name": "Golden reading room", "url": "https://cdn.pixabay.com/video/2024/04/15/208089_medium.mp4", "tile": 59, "preview": "longer", "duration": 30.0},
-    {"id": "long-258614", "name": "Rain on glass", "url": "https://cdn.pixabay.com/video/2025/02/16/258614_medium.mp4", "tile": 60, "preview": "longer", "duration": 30.9},
-    {"id": "long-181977", "name": "Sunset forest lounge", "url": "https://cdn.pixabay.com/video/2023/09/23/181977-867576065_medium.mp4", "tile": 61, "preview": "longer", "duration": 60.06},
-    {"id": "long-167688", "name": "Forest rain windows", "url": "https://cdn.pixabay.com/video/2023/06/18/167688-837428971_medium.mp4", "tile": 62, "preview": "longer", "duration": 60.138333},
-    {"id": "long-188977", "name": "Round-window lounge", "url": "https://cdn.pixabay.com/video/2023/11/13/188977-884185356_medium.mp4", "tile": 63, "preview": "longer", "duration": 60.116667},
-    {"id": "long-208106", "name": "Sunbeam lodge", "url": "https://cdn.pixabay.com/video/2024/04/15/208106_medium.mp4", "tile": 64, "preview": "longer", "duration": 30.0},
-    {"id": "long-181947", "name": "Warm sunset lounge", "url": "https://cdn.pixabay.com/video/2023/09/23/181947-867576048_medium.mp4", "tile": 65, "preview": "longer", "duration": 60.06},
-    {"id": "long-298922", "name": "Mountain study lounge", "url": "https://cdn.pixabay.com/video/2025/08/21/298922_medium.mp4", "tile": 66, "preview": "longer", "duration": 30.033333},
-    {"id": "long-209881", "name": "Sunlit green room", "url": "https://cdn.pixabay.com/video/2024/04/29/209881_medium.mp4", "tile": 67, "preview": "longer", "duration": 30.0},
-    {"id": "long-261757", "name": "Rainy city apartment", "url": "https://cdn.pixabay.com/video/2025/03/01/261757_medium.mp4", "tile": 68, "preview": "longer", "duration": 60.0},
-    {"id": "long-324169", "name": "Rainy timber bedroom", "url": "https://cdn.pixabay.com/video/2025/12/24/324169_medium.mp4", "tile": 69, "preview": "longer", "duration": 30.0},
-    {"id": "long-340848", "name": "Mountain night retreat", "url": "https://cdn.pixabay.com/video/2026/03/18/340848_medium.mp4", "tile": 70, "preview": "longer", "duration": 60.0},
-    {"id": "long-266428", "name": "Snowy shrine lantern", "url": "https://cdn.pixabay.com/video/2025/03/21/266428_medium.mp4", "tile": 72, "preview": "longer", "duration": 27.483333},
-    {"id": "long-225944", "name": "Lantern street", "url": "https://cdn.pixabay.com/video/2024/08/11/225944_medium.mp4", "tile": 73, "preview": "longer", "duration": 30.0},
-    {"id": "long-265909", "name": "Anime river sunset", "url": "https://cdn.pixabay.com/video/2025/03/19/265909_medium.mp4", "tile": 74, "preview": "longer", "duration": 60.0},
-    {"id": "long-281165", "name": "Violet Mount Fuji", "url": "https://cdn.pixabay.com/video/2025/05/23/281165_medium.mp4", "tile": 75, "preview": "longer", "duration": 30.0},
-    {"id": "long-153086", "name": "Snowy Kyoto lane", "url": "https://cdn.pixabay.com/video/2023/03/04/153086-846385128_medium.mp4", "tile": 76, "preview": "longer", "duration": 52.51},
-    {"id": "long-185425", "name": "Stormy mountain garden", "url": "https://cdn.pixabay.com/video/2023/10/17/185425-875362672_medium.mp4", "tile": 77, "preview": "longer", "duration": 25.0},
-    {"id": "long-158195", "name": "Moonlit cherry pond", "url": "https://cdn.pixabay.com/video/2023/04/10/158195-816372976_medium.mp4", "tile": 78, "preview": "longer", "duration": 60.053333},
-    {"id": "long-189472", "name": "Snowy shrine gate", "url": "https://cdn.pixabay.com/video/2023/11/17/189472-885804489_medium.mp4", "tile": 79, "preview": "longer", "duration": 60.053333},
-    {"id": "long-214500", "name": "Night library student", "url": "https://cdn.pixabay.com/video/2024/05/30/214500_medium.mp4", "tile": 80, "preview": "longer", "duration": 63.229833},
-    {"id": "long-314688", "name": "Sunset headphones", "url": "https://cdn.pixabay.com/video/2025/11/08/314688_medium.mp4", "tile": 81, "preview": "longer", "duration": 64.0},
-    {"id": "long-345955", "name": "Cozy room companion", "url": "https://cdn.pixabay.com/video/2026/04/12/345955_medium.mp4", "tile": 82, "preview": "longer", "duration": 64.0},
-    {"id": "long-208093", "name": "Coffee shop hearth", "url": "https://cdn.pixabay.com/video/2024/04/15/208093_medium.mp4", "tile": 83, "preview": "longer", "duration": 30.0},
-    {"id": "long-209201", "name": "Garden porch", "url": "https://cdn.pixabay.com/video/2024/04/24/209201_medium.mp4", "tile": 84, "preview": "longer", "duration": 20.0},
-    {"id": "long-204117", "name": "Tea by the fire", "url": "https://cdn.pixabay.com/video/2024/03/14/204117-923594068_medium.mp4", "tile": 85, "preview": "longer", "duration": 30.0},
-    {"id": "long-246984", "name": "Covered forest porch", "url": "https://cdn.pixabay.com/video/2024/12/16/246984_medium.mp4", "tile": 86, "preview": "longer", "duration": 30.0},
-    {"id": "long-267296", "name": "Round-door storybook", "url": "https://cdn.pixabay.com/video/2025/03/25/267296_medium.mp4", "tile": 87, "preview": "longer", "duration": 60.0},
-    {"id": "long-301045", "name": "Rainy fireside study", "url": "https://cdn.pixabay.com/video/2025/09/01/301045_medium.mp4", "tile": 88, "preview": "longer", "duration": 60.5},
-    {"id": "long-297472", "name": "Moonclock lounge", "url": "https://cdn.pixabay.com/video/2025/08/14/297472_medium.mp4", "tile": 89, "preview": "longer", "duration": 30.0},
-    {"id": "long-242924", "name": "Snowy coffee shop", "url": "https://cdn.pixabay.com/video/2024/11/23/242924_medium.mp4", "tile": 90, "preview": "longer", "duration": 60.0},
-    {"id": "long-243342", "name": "Winter cafe", "url": "https://cdn.pixabay.com/video/2024/11/26/243342_medium.mp4", "tile": 91, "preview": "longer", "duration": 60.0},
-    {"id": "long-286806", "name": "Open book garden", "url": "https://cdn.pixabay.com/video/2025/06/20/286806_medium.mp4", "tile": 92, "preview": "longer", "duration": 30.03},
-    {"id": "long-244452", "name": "Snowy porch chair", "url": "https://cdn.pixabay.com/video/2024/12/02/244452_medium.mp4", "tile": 93, "preview": "longer", "duration": 30.0},
-    {"id": "long-244362", "name": "Snowy cabin deck", "url": "https://cdn.pixabay.com/video/2024/12/02/244362_medium.mp4", "tile": 94, "preview": "longer", "duration": 30.0},
-    {"id": "long-210707", "name": "Autumn porch hearth", "url": "https://cdn.pixabay.com/video/2024/05/05/210707_medium.mp4", "tile": 95, "preview": "longer", "duration": 30.0},
-    {"id": "long-309388", "name": "Dusk window reader", "url": "https://cdn.pixabay.com/video/2025/10/12/309388_medium.mp4", "tile": 96, "preview": "longer", "duration": 64.0},
-    {"id": "long-265815", "name": "Neon headphones", "url": "https://cdn.pixabay.com/video/2025/03/18/265815_medium.mp4", "tile": 97, "preview": "longer", "duration": 59.993267},
-    {"id": "long-266042", "name": "Pale winter lounge", "url": "https://cdn.pixabay.com/video/2025/03/19/266042_medium.mp4", "tile": 98, "preview": "longer", "duration": 30.03},
-    {"id": "long-325442", "name": "Pink-haired study", "url": "https://cdn.pixabay.com/video/2026/01/01/325442_medium.mp4", "tile": 99, "preview": "longer", "duration": 30.0},
-    {"id": "long-265816", "name": "Night laptop study", "url": "https://cdn.pixabay.com/video/2025/03/18/265816_medium.mp4", "tile": 100, "preview": "longer", "duration": 59.993267},
-];
-const SCENES_EXTRA: SceneDef[] = [
-    {"id": "anime-lofi-rain-363709", "name": "Rainy bus stop", "url": "https://cdn.pixabay.com/video/2026/07/13/363709_medium.mp4", "tile": 0, "duration": 10.0},
-    {"id": "anime-lofi-record-363710", "name": "Record shop", "url": "https://cdn.pixabay.com/video/2026/07/13/363710_medium.mp4", "tile": 1, "duration": 10.0},
-    {"id": "autumn-forest-trees-313784", "name": "Autumn nook", "url": "https://cdn.pixabay.com/video/2025/11/04/313784_medium.mp4", "tile": 3, "duration": 30.0},
-    {"id": "autumn-forest-trees-313787", "name": "Lakeside campfire", "url": "https://cdn.pixabay.com/video/2025/11/04/313787_medium.mp4", "tile": 4, "duration": 30.0},
-    {"id": "autumn-nature-cabin-324160", "name": "Cabin bedroom", "url": "https://cdn.pixabay.com/video/2025/12/24/324160_medium.mp4", "tile": 5, "duration": 30.0},
-    {"id": "autumn-nature-cabin-324164", "name": "Forest cabin", "url": "https://cdn.pixabay.com/video/2025/12/24/324164_medium.mp4", "tile": 6, "duration": 30.0},
-    {"id": "bioluminescence-beach-waves-343671", "name": "Starlit shore", "url": "https://cdn.pixabay.com/video/2026/03/31/343671_medium.mp4", "tile": 9, "duration": 20.125},
-    {"id": "bioluminescence-beach-waves-346010", "name": "Midnight waves", "url": "https://cdn.pixabay.com/video/2026/04/12/346010_medium.mp4", "tile": 10, "duration": 15.0},
-    {"id": "bioluminescence-bioluminescent-ocean-381552", "name": "Glowing ocean", "url": "https://cdn.pixabay.com/video/2026/10/08/381552_medium.mp4", "tile": 11, "duration": 15.041667},
-    {"id": "bioluminescent-beach-375118-375118", "name": "Aurora coast", "url": "https://cdn.pixabay.com/video/2026/09/08/375118_medium.mp4", "tile": 12, "duration": 15.041667},
-    {"id": "boats-moon-moonlight-381338", "name": "Moonlit boats", "url": "https://cdn.pixabay.com/video/2026/10/07/381338_medium.mp4", "tile": 13, "duration": 15.041667},
-    {"id": "bonfire-flames-fire-201688-916116512", "name": "Bonfire", "url": "https://cdn.pixabay.com/video/2024/02/23/201688-916116512_medium.mp4", "tile": 14, "duration": 44.223333},
-    {"id": "book-candle-stars-184469-873483892", "name": "Candlelit book", "url": "https://cdn.pixabay.com/video/2023/10/10/184469-873483892_medium.mp4", "tile": 15, "duration": 30.08},
-    {"id": "book-study-books-347655", "name": "Library fire", "url": "https://cdn.pixabay.com/video/2026/04/19/347655_medium.mp4", "tile": 16, "duration": 6.3},
-    {"id": "campfire-bonfire-flames-225422", "name": "Campfire embers", "url": "https://cdn.pixabay.com/video/2024/08/08/225422_medium.mp4", "tile": 17, "duration": 11.9},
-    {"id": "candle-flame-advent-311235", "name": "Rainy candle", "url": "https://cdn.pixabay.com/video/2025/10/21/311235_medium.mp4", "tile": 18, "duration": 19.291667},
-    {"id": "candle-flame-advent-312390", "name": "Candlelight", "url": "https://cdn.pixabay.com/video/2025/10/28/312390_medium.mp4", "tile": 19, "duration": 13.6},
-    {"id": "city-starry-sky-310146", "name": "Purple night", "url": "https://cdn.pixabay.com/video/2025/10/15/310146_medium.mp4", "tile": 22, "duration": 8.083333},
-    {"id": "coffee-cup-rest-309872", "name": "Rainy coffee", "url": "https://cdn.pixabay.com/video/2025/10/14/309872_medium.mp4", "tile": 23, "duration": 12.0},
-    {"id": "coffee-living-room-237103", "name": "Fireside coffee", "url": "https://cdn.pixabay.com/video/2024/10/19/237103_medium.mp4", "tile": 24, "duration": 17.666667},
-    {"id": "coffee-tea-steam-285759", "name": "Morning steam", "url": "https://cdn.pixabay.com/video/2025/06/13/285759_medium.mp4", "tile": 25, "duration": 5.64},
-    {"id": "couch-sofa-rain-185888-876579680", "name": "Forest lounge", "url": "https://cdn.pixabay.com/video/2023/10/20/185888-876579680_medium.mp4", "tile": 27, "duration": 6.0},
-    {"id": "cozy-bedroom-289797-289797", "name": "Cozy bedroom", "url": "https://cdn.pixabay.com/video/2025/07/06/289797_medium.mp4", "tile": 28, "duration": 30.0},
-    {"id": "cozy-bedroom-modern-290857", "name": "Rainy bedroom", "url": "https://cdn.pixabay.com/video/2025/07/12/290857_medium.mp4", "tile": 29, "duration": 24.0},
-    {"id": "cozy-bedroom-modern-290943", "name": "Quiet suite", "url": "https://cdn.pixabay.com/video/2025/07/12/290943_medium.mp4", "tile": 30, "duration": 24.0},
-    {"id": "cozy-bedroom-modern-290944", "name": "Window retreat", "url": "https://cdn.pixabay.com/video/2025/07/12/290944_medium.mp4", "tile": 31, "duration": 24.0},
-    {"id": "creek-snow-winter-190915-888878158", "name": "Snowy creek", "url": "https://cdn.pixabay.com/video/2023/11/27/190915-888878158_medium.mp4", "tile": 33, "duration": 50.133333},
-    {"id": "dark-ocean-ocean-372868", "name": "Ocean doorway", "url": "https://cdn.pixabay.com/video/2026/08/27/372868_medium.mp4", "tile": 34, "duration": 10.3},
-    {"id": "dark-ocean-ocean-372869", "name": "Stormy pier", "url": "https://cdn.pixabay.com/video/2026/08/27/372869_medium.mp4", "tile": 35, "duration": 12.633333},
-    {"id": "dark-room-storm-369507", "name": "Rainy room", "url": "https://cdn.pixabay.com/video/2026/08/09/369507_medium.mp4", "tile": 36, "duration": 10.0},
-    {"id": "dream-nature-fantasy-297586", "name": "Winter cottage", "url": "https://cdn.pixabay.com/video/2025/08/15/297586_medium.mp4", "tile": 37, "duration": 7.733333},
-    {"id": "fireplace-fire-heat-327084", "name": "Fireplace", "url": "https://cdn.pixabay.com/video/2026/01/11/327084_medium.mp4", "tile": 38, "duration": 12.04},
-    {"id": "fireplace-winter-snow-347140", "name": "Snowy lounge", "url": "https://cdn.pixabay.com/video/2026/04/17/347140_medium.mp4", "tile": 39, "duration": 16.0},
-    {"id": "flowers-tree-moon-179020-861022089", "name": "Moonlit blossoms", "url": "https://cdn.pixabay.com/video/2023/09/03/179020-861022089_medium.mp4", "tile": 40, "duration": 7.21},
-    {"id": "landscape-waterfall-water-298040", "name": "Forest falls", "url": "https://cdn.pixabay.com/video/2025/08/18/298040_medium.mp4", "tile": 44, "duration": 33.383333},
-    {"id": "library-books-363706-363706", "name": "Library desk", "url": "https://cdn.pixabay.com/video/2026/07/13/363706_medium.mp4", "tile": 45, "duration": 10.0},
-    {"id": "loop-ocean-nature-358453", "name": "Silver waves", "url": "https://cdn.pixabay.com/video/2026/06/14/358453_medium.mp4", "tile": 49, "duration": 15.041667},
-    {"id": "luxury-bedroom-cozy-290401", "name": "Night lounge", "url": "https://cdn.pixabay.com/video/2025/07/09/290401_medium.mp4", "tile": 50, "duration": 30.0},
-    {"id": "moon-full-moon-370403", "name": "Sunset ocean", "url": "https://cdn.pixabay.com/video/2026/08/13/370403_medium.mp4", "tile": 52, "duration": 5.0},
-    {"id": "moon-nature-night-290116", "name": "Crimson moon", "url": "https://cdn.pixabay.com/video/2025/07/08/290116_medium.mp4", "tile": 53, "duration": 8.4},
-    {"id": "moon-night-sky-256347", "name": "Still moonlight", "url": "https://cdn.pixabay.com/video/2025/02/04/256347_medium.mp4", "tile": 54, "duration": 15.133182},
-    {"id": "moon-trees-forest-183967-872226594", "name": "Forest moon", "url": "https://cdn.pixabay.com/video/2023/10/07/183967-872226594_medium.mp4", "tile": 55, "duration": 7.615},
-    {"id": "moonlight-patrol-boat-290456", "name": "Moonlit sail", "url": "https://cdn.pixabay.com/video/2025/07/10/290456_medium.mp4", "tile": 56, "duration": 5.066667},
-    {"id": "mountains-lake-water-124774-732319023", "name": "Alpine lake", "url": "https://cdn.pixabay.com/video/2022/07/20/124774-732319023_medium.mp4", "tile": 57, "duration": 20.01},
-    {"id": "nature-night-moonlight-313411", "name": "Golden moon", "url": "https://cdn.pixabay.com/video/2025/11/02/313411_medium.mp4", "tile": 58, "duration": 7.6},
-    {"id": "night-view-moon-143565-782758320", "name": "City moon", "url": "https://cdn.pixabay.com/video/2022/12/19/143565-782758320_medium.mp4", "tile": 60, "duration": 12.011667},
-    {"id": "night-view-yamadas-283431", "name": "Night sky", "url": "https://cdn.pixabay.com/video/2025/06/03/283431_medium.mp4", "tile": 61, "duration": 8.966667},
-    {"id": "ocean-night-stars-377557", "name": "Ship at night", "url": "https://cdn.pixabay.com/video/2026/09/19/377557_medium.mp4", "tile": 62, "duration": 30.066667},
-    {"id": "ocean-sea-fog-299418", "name": "Misty ocean", "url": "https://cdn.pixabay.com/video/2025/08/24/299418_medium.mp4", "tile": 64, "duration": 10.4},
-    {"id": "ocean-sea-waves-174033-850286651", "name": "Blue moon coast", "url": "https://cdn.pixabay.com/video/2023/07/31/174033-850286651_medium.mp4", "tile": 65, "duration": 7.04},
-    {"id": "ocean-sea-waves-232793", "name": "Rocky sea", "url": "https://cdn.pixabay.com/video/2024/09/23/232793_medium.mp4", "tile": 66, "duration": 60.026633},
-    {"id": "purple-cosmic-space-278396", "name": "Purple cosmos", "url": "https://cdn.pixabay.com/video/2025/05/12/278396_medium.mp4", "tile": 67, "duration": 52.2},
-    {"id": "radio-tower-night-211067", "name": "Tokyo tower", "url": "https://cdn.pixabay.com/video/2024/05/07/211067_medium.mp4", "tile": 68, "duration": 31.08105},
-    {"id": "rain-cobblestone-puddle-380412", "name": "Rainy cobbles", "url": "https://cdn.pixabay.com/video/2026/10/02/380412_medium.mp4", "tile": 69, "duration": 14.166667},
-    {"id": "rain-leaves-foliage-227700", "name": "Rainy leaves", "url": "https://cdn.pixabay.com/video/2024/08/21/227700_medium.mp4", "tile": 70, "duration": 24.0},
-    {"id": "rain-outside-372862-372862", "name": "Storm lounge", "url": "https://cdn.pixabay.com/video/2026/08/27/372862_medium.mp4", "tile": 72, "duration": 10.0},
-    {"id": "rain-raining-raindrops-199501-910530342", "name": "Rainy puddles", "url": "https://cdn.pixabay.com/video/2024/02/06/199501-910530342_medium.mp4", "tile": 73, "duration": 11.36},
-    {"id": "sea-coast-japan-197525-905005651", "name": "Quiet coast", "url": "https://cdn.pixabay.com/video/2024/01/21/197525-905005651_medium.mp4", "tile": 76, "duration": 37.845},
-    {"id": "sea-full-moon-227600", "name": "Moonlit surf", "url": "https://cdn.pixabay.com/video/2024/08/20/227600_medium.mp4", "tile": 77, "duration": 15.041783},
-    {"id": "sea-ocean-waves-269357", "name": "Moonlit boat", "url": "https://cdn.pixabay.com/video/2025/04/02/269357_medium.mp4", "tile": 78, "duration": 6.366667},
-    {"id": "sky-clouds-moon-243117", "name": "Violet sky", "url": "https://cdn.pixabay.com/video/2024/11/24/243117_medium.mp4", "tile": 79, "duration": 10.033333},
-    {"id": "snow-cold-scenery-167736-837429014", "name": "Snowy shrine", "url": "https://cdn.pixabay.com/video/2023/06/18/167736-837429014_medium.mp4", "tile": 80, "duration": 10.046667},
-    {"id": "starry-sky-milky-170888-844432955", "name": "Starry pines", "url": "https://cdn.pixabay.com/video/2023/07/10/170888-844432955_medium.mp4", "tile": 81, "duration": 7.55},
-    {"id": "starry-sky-milky-285663", "name": "Starry cottage", "url": "https://cdn.pixabay.com/video/2025/06/13/285663_medium.mp4", "tile": 82, "duration": 27.05},
-    {"id": "steaming-mug-hot-322244", "name": "Warm coffee", "url": "https://cdn.pixabay.com/video/2025/12/16/322244_medium.mp4", "tile": 83, "duration": 15.3},
-    {"id": "train-commuting-train-170887-844432947", "name": "City commute", "url": "https://cdn.pixabay.com/video/2023/07/10/170887-844432947_medium.mp4", "tile": 85, "duration": 12.583333},
-    {"id": "tree-foliage-rain-176026-854526263", "name": "Green leaves", "url": "https://cdn.pixabay.com/video/2023/08/14/176026-854526263_medium.mp4", "tile": 87, "duration": 15.266667},
-    {"id": "tree-forest-rain-205213-926480936", "name": "Rainy woodland", "url": "https://cdn.pixabay.com/video/2024/03/22/205213-926480936_medium.mp4", "tile": 88, "duration": 15.033333},
-    {"id": "tree-leaves-rain-172759-847869814", "name": "Wet leaves", "url": "https://cdn.pixabay.com/video/2023/07/22/172759-847869814_medium.mp4", "tile": 89, "duration": 10.133333},
-    {"id": "tree-stars-starry-176198-855206384", "name": "Violet branches", "url": "https://cdn.pixabay.com/video/2023/08/15/176198-855206384_medium.mp4", "tile": 90, "duration": 7.566667},
-    {"id": "trees-foliage-forest-171443-845465129", "name": "Mountain forest", "url": "https://cdn.pixabay.com/video/2023/07/13/171443-845465129_medium.mp4", "tile": 91, "duration": 15.266667},
-    {"id": "trees-forest-moon-183969-872226597", "name": "Night blossoms", "url": "https://cdn.pixabay.com/video/2023/10/07/183969-872226597_medium.mp4", "tile": 92, "duration": 7.658333},
-    {"id": "trees-leaves-snow-190667-888333548", "name": "Winter branches", "url": "https://cdn.pixabay.com/video/2023/11/25/190667-888333548_medium.mp4", "tile": 93, "duration": 6.228333},
-    {"id": "wallpaper-pixel-anime-247738", "name": "Neon city", "url": "https://cdn.pixabay.com/video/2024/12/19/247738_medium.mp4", "tile": 95, "duration": 10.2},
-    {"id": "wallpaper-pixel-anime-247740", "name": "Sunset crossing", "url": "https://cdn.pixabay.com/video/2024/12/19/247740_medium.mp4", "tile": 96, "duration": 19.0},
-    {"id": "wallpaper-pixel-anime-247741", "name": "Kyoto evening", "url": "https://cdn.pixabay.com/video/2024/12/19/247741_medium.mp4", "tile": 97, "duration": 6.0},
-    {"id": "waves-ocean-sea-372255", "name": "Moonlit ocean", "url": "https://cdn.pixabay.com/video/2026/08/23/372255_medium.mp4", "tile": 99, "duration": 15.041667},
-    // Real-world Earth landmarks sourced 2026-11-08; loop-checked.
-    {"id": "earth-215421", "name": "Eiffel Tower by the Seine", "url": "https://cdn.pixabay.com/video/2024/06/05/215421_large.mp4", "duration": 15.0, "poster": "posters/earth-215421.jpg"},
-    {"id": "earth-10866", "name": "Brooklyn Bridge at night", "url": "https://cdn.pixabay.com/video/2017/07/23/10866-226635329_large.mp4", "duration": 12.72, "poster": "posters/earth-10866.jpg"},
-    {"id": "earth-149070", "name": "Statue of Liberty", "url": "https://cdn.pixabay.com/video/2023/02/02/149070-795426972_large.mp4", "duration": 60.0, "poster": "posters/earth-149070.jpg"},
-    {"id": "earth-17962", "name": "Golden Gate Bridge", "url": "https://cdn.pixabay.com/video/2018/08/26/17962-287000048_large.mp4", "duration": 58.36, "poster": "posters/earth-17962.jpg"},
-    {"id": "earth-200313", "name": "Northern lights", "url": "https://cdn.pixabay.com/video/2024/02/12/200313-912384824_large.mp4", "duration": 30.06, "poster": "posters/earth-200313.jpg"},
-    {"id": "earth-292822", "name": "Green aurora", "url": "https://cdn.pixabay.com/video/2025/07/22/292822_large.mp4", "duration": 20.03, "poster": "posters/earth-292822.jpg"},
-    {"id": "earth-183960", "name": "Golden beach sunset", "url": "https://cdn.pixabay.com/video/2023/10/07/183960-872226574_large.mp4", "duration": 22.83, "poster": "posters/earth-183960.jpg"},
-    {"id": "earth-45704", "name": "Rolling ocean waves", "url": "https://cdn.pixabay.com/video/2020/07/27/45704-446485426_large.mp4", "duration": 28.73, "poster": "posters/earth-45704.jpg"},
-    {"id": "earth-214938", "name": "Mount Fuji sunrise", "url": "https://cdn.pixabay.com/video/2024/06/02/214938_large.mp4", "duration": 21.35, "poster": "posters/earth-214938.jpg"},
-    {"id": "earth-91319", "name": "Mount Fuji lake", "url": "https://cdn.pixabay.com/video/2021/10/08/91319-626985271_large.mp4", "duration": 12.47, "poster": "posters/earth-91319.jpg"},
-    {"id": "earth-246856", "name": "Rainbow waterfall", "url": "https://cdn.pixabay.com/video/2024/12/15/246856_large.mp4", "duration": 30.03, "poster": "posters/earth-246856.jpg"},
-    {"id": "earth-173887", "name": "Mountain river falls", "url": "https://cdn.pixabay.com/video/2023/07/30/173887-850026370_large.mp4", "duration": 29.56, "poster": "posters/earth-173887.jpg"}
+    {"id": "lofi-246243", "name": "Windowsill cat", "url": "https://cdn.pixabay.com/video/2024/12/11/246243_medium.mp4", "tile": 0, "preview": "v2cat", "duration": 76.71},
+    {"id": "lofi-246535", "name": "Sunset cat", "url": "https://cdn.pixabay.com/video/2024/12/13/246535_medium.mp4", "tile": 1, "preview": "v2cat", "duration": 58.56},
+    {"id": "lofi-246241", "name": "Night room cat", "url": "https://cdn.pixabay.com/video/2024/12/11/246241_medium.mp4", "tile": 2, "preview": "v2cat", "duration": 75.34},
+    {"id": "lofi-246242", "name": "Fireplace cat", "url": "https://cdn.pixabay.com/video/2024/12/11/246242_medium.mp4", "tile": 3, "preview": "v2cat", "duration": 58.69},
+    {"id": "lofi-270983", "name": "Mountain cafe", "url": "https://cdn.pixabay.com/video/2025/04/09/270983_medium.mp4", "tile": 4, "preview": "v2cat", "duration": 5.33},
+    {"id": "lofi-73663", "name": "Attic nap", "url": "https://cdn.pixabay.com/video/2021/05/09/73663-549527825_medium.mp4", "tile": 5, "preview": "v2cat", "duration": 60.01},
+    {"id": "lofi-215407", "name": "Rainy study desk", "url": "https://cdn.pixabay.com/video/2024/06/05/215407_medium.mp4", "tile": 6, "preview": "v2cat", "duration": 60.09},
+    {"id": "photo-107976", "name": "Tropical waterfall", "url": "https://cdn.pixabay.com/video/2022/02/17/107976-678971242_medium.mp4", "tile": 7, "preview": "v2cat", "duration": 60.01, "blend": true},
+    {"id": "photo-22589", "name": "Waterfall streams", "url": "https://cdn.pixabay.com/video/2019/04/04/22589-328624822_medium.mp4", "tile": 8, "preview": "v2cat", "duration": 36.31, "blend": true}
 ];
 
-const SCENE_BY_ID = new Map<string, SceneDef>([...SCENES, ...SCENES_LONG, ...SCENES_EXTRA].map((s) => [s.id, s]));
+const SCENE_BY_ID = new Map<string, SceneDef>(SCENES.map((s) => [s.id, s]));
 // Quality ladder: smaller, same-resolution variants start faster on phones; larger variants are retried on failure.
 function sceneLadder(url: string, mobile: boolean): string[] {
     const swap = (q: string) => url.replace(/_(tiny|small|medium|large)\.mp4/, q);
@@ -356,12 +163,6 @@ function sceneLadder(url: string, mobile: boolean): string[] {
 function posterSrc(scene: SceneDef): string | undefined {
     const inline = (window as any).__SFT_POSTERS?.[scene.id];
     return inline || scene.poster;
-}
-function tileBackdrop(scene: SceneDef, catalog: string): React.CSSProperties {
-    const __p = posterSrc(scene); if (__p) return { backgroundImage: `url(${__p})`, backgroundSize: 'cover', backgroundPosition: 'center' };
-    if (!catalog || scene.tile == null) return { backgroundImage: 'linear-gradient(135deg,#182226,#090d13)' };
-    const cols = scene.preview === 'curated' ? 3 : 8, rows = scene.preview === 'curated' ? 3 : 13;
-    return { backgroundImage: `url(${catalog})`, backgroundSize: `${cols * 100}% ${rows * 100}%`, backgroundPosition: `${(scene.tile % cols) * 100 / (cols - 1)}% ${Math.floor(scene.tile / cols) * 100 / (rows - 1)}%` };
 }
 const SCENE_FILES: Record<string, string> = {
     'balcony-dusk-l.jpg': '53-balcony-dusk-l.jpg',
@@ -414,7 +215,7 @@ const ACCENTS = [
 ];
 
 const FONTS = [
-    { id: 'sans', name: 'Sans', css: 'inherit' },
+    { id: 'sans', name: 'Sans', css: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" },
     { id: 'serif', name: 'Serif', css: "Georgia, 'Times New Roman', serif" },
     { id: 'mono', name: 'Mono', css: "ui-monospace, 'SF Mono', Menlo, Consolas, monospace" },
     { id: 'round', name: 'Round', css: "'Trebuchet MS', Verdana, sans-serif" },
@@ -603,13 +404,21 @@ async function resolveImageSource(input: string): Promise<Blob> {
         if (!pick?.url) throw new Error('pin has no image');
         imageUrl = pick.url;
     }
+    // Pinterest CDN thumbnail links (i.pinimg.com/236x|564x|736x/...) upscale badly; request the original-resolution file and verify it by actually fetching it, falling back to the pasted URL if the original is missing.
+    const pinCdn = imageUrl.match(/^(https:\/\/i\.pinimg\.com)\/(?:236x|564x|736x)(\/.*)$/i);
+    if (pinCdn) {
+        try {
+            const origBlob = await fetchBlob(`${pinCdn[1]}/originals${pinCdn[2]}`);
+            if (origBlob.type.startsWith('image/')) return origBlob;
+        } catch { /* original unavailable; try the pasted size below */ }
+    }
     if (!/^https:\/\//i.test(imageUrl)) throw new Error('not a link');
     try {
         const blob = await fetchBlob(imageUrl);
         if (blob.type.startsWith('image/')) return blob;
         throw new Error('not an image');
     } catch {
-        const proxied = `https://images.weserv.nl/?url=${encodeURIComponent(imageUrl.replace(/^https?:\/\//, ''))}&w=1920`;
+        const proxied = `https://images.weserv.nl/?url=${encodeURIComponent(imageUrl.replace(/^https?:\/\//, ''))}`; // full size through the relay, no 1920px cap
         const blob = await fetchBlob(proxied);
         if (!blob.type.startsWith('image/')) throw new Error('not an image');
         return blob;
@@ -669,15 +478,15 @@ function Toggle({ label, hint, checked, onChange }: { label: string; hint?: stri
 }
 
 // ---------- memoized subtrees: the ticking clock must not re-render these ----------
-const SceneVideo = React.memo(function SceneVideo({ scene, paused, animate }: { scene: SceneDef; paused: boolean; animate: boolean }) {
+const SceneVideo = React.memo(function SceneVideo({ scene, paused, animate, onReady, onFail }: { scene: SceneDef; paused: boolean; animate: boolean; onReady: (s: SceneDef) => void; onFail: (s: SceneDef) => void }) {
     const root = useRef<HTMLDivElement | null>(null);
     const [error, setError] = useState(false);
     const [attempt, setAttempt] = useState(0);
     const mobile = useMemo(() => window.matchMedia('(max-width: 900px), (orientation: portrait)').matches, []);
     const ladder = useMemo(() => scene.url ? sceneLadder(scene.url, mobile) : [sceneMedia(scene.id, 'p', 'mp4')], [scene, mobile]);
     const src = ladder[Math.min(attempt, ladder.length - 1)];
-    const atlas = useImageUrl(scene.preview || 'catalog');
     const control = useRef({ paused, animate }); control.current = { paused, animate };
+    const cb = useRef({ onReady, onFail }); cb.current = { onReady, onFail };
     useEffect(() => {
         setError(false);
         const stage = root.current;
@@ -691,13 +500,14 @@ const SceneVideo = React.memo(function SceneVideo({ scene, paused, animate }: { 
             v.muted = true; v.playsInline = true;
             v.setAttribute('playsinline', ''); v.setAttribute('disablepictureinpicture', ''); v.setAttribute('disableremoteplayback', '');
             v.preload = 'auto'; v.src = src; v.setAttribute('aria-hidden', 'true');
+            v.loop = !scene.blend; // designed loops wrap natively; photographed scenes crossfade over the join
             return v;
         };
         const onErr = () => {
             if (errSeen || dead) return; errSeen = true;
             setAttempt((cur) => {
                 if (cur < ladder.length - 1) return cur + 1;
-                setError(true); return cur;
+                setError(true); if (a) { a.remove(); a = null; } cb.current.onFail(scene); return cur;
             });
         };
         let b: HTMLVideoElement | null = null;
@@ -717,11 +527,12 @@ const SceneVideo = React.memo(function SceneVideo({ scene, paused, animate }: { 
         };
         const paint = () => {
             if (dead || !a) return;
-            if (!started && a.readyState >= 2) { started = true; if (runWanted()) play(a); }
+            if (!started && a.readyState >= 2) { started = true; if (root.current) root.current.style.opacity = '1'; cb.current.onReady(scene); if (runWanted()) play(a); }
             if (runWanted() && started) {
                 if (a.paused && !a.ended) play(a);
                 const end = scene.duration || a.duration;
                 const d = Math.min(1.5, end / 4);
+                if (!scene.blend) { raf = requestAnimationFrame(paint); return; }
                 if (!blending && Number.isFinite(end) && a.currentTime >= end - d) {
                     blending = true;
                     b = makeVideo(); b.style.opacity = '0'; b.style.zIndex = '2';
@@ -754,7 +565,27 @@ const SceneVideo = React.memo(function SceneVideo({ scene, paused, animate }: { 
             window.removeEventListener('pointerdown', sync);
         };
     }, [src]);
-    return <div ref={root} className="ft-scene-stage" key={src} style={tileBackdrop(scene, atlas)}>{error && <span className="ft-stream-status">This scene could not load right now. Try another background.</span>}</div>;
+    return <div ref={root} className="ft-scene-stage" key={src} style={{ opacity: 0, transition: 'opacity .25s' }}>{error && <span className="ft-stream-status">This scene could not load right now. Try another background.</span>}</div>;
+});
+
+// Scene switching: the previously decoded scene stays on screen until the new scene's first frame is ready, then swaps. On first visit a still photo shows until first decode; on failure the previous scene (or the still) remains - never a stretched preview thumbnail or a different-looking fallback scene.
+const SceneStage = React.memo(function SceneStage({ scene, paused, animate }: { scene: SceneDef; paused: boolean; animate: boolean }) {
+    const [stack, setStack] = useState<SceneDef[]>([scene]);
+    const [readyId, setReadyId] = useState<string | null>(null);
+    const firstStill = useImageUrl('rain');
+    useEffect(() => {
+        setStack((prev) => (prev.length && prev[prev.length - 1].id === scene.id) ? prev : [...prev.filter((s) => s.id !== scene.id).slice(-1), scene]);
+    }, [scene]);
+    const handleReady = useCallback((s: SceneDef) => {
+        setReadyId(s.id);
+        window.setTimeout(() => setStack((prev) => prev.filter((x) => x.id === s.id)), 400);
+    }, []);
+    const handleFail = useCallback((_s: SceneDef) => { /* failed scene keeps its error note; previous scene or the still stays visible behind it */ }, []);
+    const loading = readyId === null || !stack.some((s) => s.id === readyId);
+    return <>
+        {loading ? <div className="ft-bg" style={{ backgroundColor: '#101418', backgroundImage: firstStill ? `url(${firstStill})` : undefined, backgroundSize: 'cover', backgroundPosition: 'center' }} /> : null}
+        {stack.map((s) => <SceneVideo key={s.id} scene={s} paused={paused} animate={animate} onReady={handleReady} onFail={handleFail} />)}
+    </>;
 });
 
 interface BgMedia { url: string; kind: 'image' | 'video' }
@@ -774,7 +605,7 @@ const Background = React.memo(function Background({ kind, id, scrim, builtinSrc,
     const linkVideo = kind === 'link' && linkBg?.kind === 'video' ? linkBg.url : kind === 'upload' && uploadBg?.kind === 'video' ? uploadBg.url : null;
     return <>
         {scene
-            ? <SceneVideo scene={scene} paused={!!paused} animate={animate} />
+            ? <SceneStage scene={scene} paused={!!paused} animate={animate} />
             : linkVideo
                 ? <CustomVideo src={linkVideo} paused={!!paused} animate={animate} fit={customFit} />
                 : kind === 'animated'
@@ -805,7 +636,7 @@ const CustomVideo = React.memo(function CustomVideo({ src, paused, animate, fit 
 });
 
 const SceneSwatch = React.memo(function SceneSwatch({ scene, active, onPick }: { scene: SceneDef; active: boolean; onPick: () => void }) {
-    const catalog=useImageUrl(scene.preview || 'catalog');const cols=scene.preview==='curated'?3:8,rows=scene.preview==='curated'?3:13;
+    const catalog=useImageUrl(scene.preview || 'catalog');const cols=scene.preview==='v2cat'?3:scene.preview==='curated'?3:8,rows=scene.preview==='v2cat'?3:scene.preview==='curated'?3:13;
     return <button type="button" className={`ft-bgswatch ft-bgswatch-named ${active ? 'is-active' : ''}`} aria-label={`${scene.name} animated scene`} onClick={onPick}>
         {posterSrc(scene) ? <img className="ft-bgswatch-img" src={posterSrc(scene)} alt="" loading="lazy" decoding="async" /> : scene.tile != null ? <span className="ft-bgswatch-img" style={{backgroundImage: catalog ? `url(${catalog})` : undefined, backgroundSize:`${cols*100}% ${rows*100}%`,backgroundPosition: `${(scene.tile % cols)*100/(cols-1)}% ${Math.floor(scene.tile/cols)*100/(rows-1)}%`}} /> : <img className="ft-bgswatch-img" src={scenePoster(scene, 'p')} alt="" loading="lazy" decoding="async" />}
         <span className="ft-bgswatch-name">{scene.name}</span>
@@ -919,34 +750,6 @@ function PopoutMirror() {
         {stale ? <p className="ft-popout-note">Open the study timer in another tab to control it from here.</p> : null}
     </div>;
 }
-
-const SCENE_GROUPS: { section: string; name: string; ids: string[] }[] = [
-    { section: "Real-world scenes", name: "Earth landmarks", ids: ["earth-215421", "earth-10866", "earth-256109", "earth-149070", "earth-17962", "earth-381", "earth-200313", "earth-292822", "earth-183960", "earth-45704", "earth-214938", "earth-91319", "earth-246856", "earth-173887"] },
-    { section: "Real-world scenes", name: "Fireplaces & warm drinks", ids: ["bonfire-flames-fire-201688-916116512", "campfire-bonfire-flames-225422", "fireplace-fire-heat-327084", "cozy-winter-autumn-253056", "candle-flame-advent-312390", "candle-flame-advent-311235", "coffee-tea-steam-285759", "steaming-mug-hot-322244", "candle-flame-candlelight-312404"] },
-    { section: "Real-world scenes", name: "Ocean & coast", ids: ["lighthouse-landscape-nature-325141", "lighthouse-storm-ocean-373895", "long-38271", "loop-ocean-nature-358453", "ocean-sea-waves-232793", "ocean-sea-fog-299418", "ocean-sea-waves-174033-850286651", "sea-coast-japan-197525-905005651", "sea-full-moon-227600", "waves-ocean-sea-372255", "sea-ocean-waves-269357", "ocean-night-stars-377557", "ocean-scene-cinemagraph-372866", "moonlight-patrol-boat-290456", "dark-ocean-ocean-372869", "moon-full-moon-370403", "nature-night-moonlight-313411", "moon-night-sky-256347", "moon-nature-night-290116", "dark-ocean-ocean-372868", "lighthouse-wave-ocean-358853"] },
-    { section: "Real-world scenes", name: "Forest & mountains", ids: ["moon-trees-forest-183967-872226594", "rain-raining-raindrops-199501-910530342", "cedar-tree-line-211013", "trees-foliage-forest-171443-845465129", "waterfall-trees-forest-208570", "landscape-waterfall-water-298040", "forest-nature-wood-329836", "mountains-lake-water-124774-732319023", "tree-foliage-rain-176026-854526263", "tree-forest-rain-205213-926480936", "tree-leaves-rain-172759-847869814", "rain-leaves-foliage-227700", "rain-nature-water-289712", "long-258614", "flowers-tree-moon-179020-861022089"] },
-    { section: "Real-world scenes", name: "Snow & winter", ids: ["creek-snow-winter-190915-888878158", "trees-leaves-snow-190667-888333548", "winter-snow-nature-336603", "snow-cold-scenery-167736-837429014", "long-266428"] },
-    { section: "Real-world scenes", name: "Night skies & cities", ids: ["starry-sky-milky-170888-844432955", "starry-sky-milky-285663", "sky-clouds-moon-243117", "night-view-yamadas-283431", "night-view-moon-143565-782758320", "train-commuting-train-170887-844432947", "radio-tower-night-211067", "rain-cobblestone-puddle-380412", "long-75368"] },
-    { section: "Illustrated scenes", name: "Cats & companions", ids: ["long-246535", "long-246241", "long-201968", "long-371447", "long-345856", "long-312345", "long-246242", "long-246243", "long-301247", "long-345838", "long-271841", "long-345955"] },
-    { section: "Illustrated scenes", name: "Libraries & books", ids: ["long-202823", "long-360380", "long-208105", "long-204238", "long-205644", "long-205634", "long-210278", "long-267920", "long-208089", "long-182592", "long-259293", "long-267296", "library-books-363706-363706", "book-study-books-347655", "book-candle-stars-184469-873483892", "long-214500", "long-286806", "long-276498", "long-310025"] },
-    { section: "Illustrated scenes", name: "Rainy rooms", ids: ["long-215407", "long-297863", "long-229537", "long-211089", "long-209201", "long-246984", "long-309388", "long-261757", "long-324169", "long-257953", "long-258729", "long-301045", "long-156473", "long-120583", "cozy-bedroom-modern-290857", "dark-room-storm-369507", "rain-outside-372862-372862", "long-201179", "long-167688", "long-210707", "long-243696", "long-340848", "long-244362", "long-244452", "long-242924", "long-243342", "autumn-forest-trees-313784", "coffee-cup-rest-309872"] },
-    { section: "Illustrated scenes", name: "City lights & neon", ids: ["long-265906", "long-311563", "long-180170", "long-379222", "long-330062", "long-337559", "long-253904", "long-267347", "long-265815", "wallpaper-pixel-anime-247738", "city-starry-sky-310146", "wallpaper-pixel-anime-247740", "wallpaper-pixel-anime-247741", "long-225944", "long-265909", "long-265816", "long-325442", "anime-lofi-record-363710", "anime-lofi-rain-363709", "long-297736", "long-314688"] },
-    { section: "Illustrated scenes", name: "Japan & cherry blossom", ids: ["long-153086", "long-185425", "long-158195", "long-189472", "long-281165"] },
-    { section: "Illustrated scenes", name: "Dreamy nights", ids: ["bioluminescence-beach-waves-343671", "bioluminescence-beach-waves-346010", "bioluminescence-bioluminescent-ocean-381552", "bioluminescent-beach-375118-375118", "boats-moon-moonlight-381338", "purple-cosmic-space-278396", "turtle-moon-night-289572", "trees-forest-moon-183969-872226597", "tree-stars-starry-176198-855206384", "long-181971", "long-248668", "long-168104", "long-266042", "long-208621", "long-236040", "dream-nature-fantasy-297586", "fireplace-winter-snow-347140", "long-209220", "long-297472", "long-188977", "long-251562"] },
-    { section: "Illustrated scenes", name: "Cozy rooms", ids: ["long-211097", "long-204116", "long-208856", "long-247096", "long-205001", "long-166272", "long-108292", "long-219025", "long-181977", "long-208106", "long-181947", "long-298922", "long-209881", "long-208093", "long-204117", "autumn-forest-trees-313787", "autumn-nature-cabin-324160", "autumn-nature-cabin-324164", "coffee-living-room-237103", "couch-sofa-rain-185888-876579680", "cozy-bedroom-289797-289797", "cozy-bedroom-modern-290943", "cozy-bedroom-modern-290944", "luxury-bedroom-cozy-290401"] },
-];
-const SceneGroup: React.FC<{ group: { section: string; name: string; ids: string[] }; bg: { kind: BgKind; id?: string; source?: string }; patch: (p: Partial<Settings>) => void; showSection: boolean }> = ({ group, bg, patch, showSection }) => {
-    const [open, setOpen] = useState(false);
-    const scenes = group.ids.map((id) => SCENE_BY_ID.get(id)).filter((s): s is SceneDef => !!s);
-    if (!scenes.length) return null;
-    return <>
-        {showSection ? <h4 className="ft-subhead">{group.section}</h4> : null}
-        <details className="ft-extra-scenes" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
-            <summary>{group.name} ({scenes.length})</summary>
-            {open ? <div className="ft-bggrid">{scenes.map((s) => <SceneSwatch key={s.id} scene={s} active={bg.kind === 'scene' && bg.id === s.id} onPick={() => patch({ background: { kind: 'scene', id: s.id } })} />)}</div> : null}
-        </details>
-    </>;
-};
 
 const SettingsSheet = React.memo(function SettingsSheet({ settings, patch, bgStatus, soundStatus, lastBgSrcRef, lastSndSrcRef, resolveLinkBg, resolveCustomSound, uploadBg, uploadSound, previewAlarm, requestNotifications, notificationsSupported, wakeLockSupported, onResetSettings, savedMessage, onClose }: {
     settings: Settings; patch: (part: Partial<Settings>) => void;
@@ -1089,12 +892,11 @@ const SettingsSheet = React.memo(function SettingsSheet({ settings, patch, bgSta
 
         <section>
             <h3>Background</h3>
-            <h4 className="ft-subhead">Featured scenes</h4>
+            <h4 className="ft-subhead">Scenes</h4>
             <div className="ft-bggrid">
                 {SCENES.map((s) => <SceneSwatch key={s.id} scene={s} active={bg.kind === 'scene' && bg.id === s.id} onPick={() => patch({ background: { kind: 'scene', id: s.id } })} />)}
             </div>
-            {SCENE_GROUPS.map((g, i) => <SceneGroup key={g.name} group={g} bg={bg} patch={patch} showSection={i === 0 || SCENE_GROUPS[i - 1].section !== g.section} />)}
-            <p className="ft-field-hint">Scenes fill the whole screen. Only scenes whose motion loops cleanly are listed. Videos stream only when chosen; a scene that cannot load shows its preview instead of going black.</p>
+            <p className="ft-field-hint">Scenes fill the whole screen. Illustrated scenes are drawn to loop seamlessly; photographed scenes crossfade briefly over their loop point. Videos stream directly from Pixabay only when chosen. While a scene loads, your previous background stays on screen (a still photo on your first visit); a scene that cannot load keeps it rather than going black or swapping to something else.</p>
             <Toggle label="Animate backgrounds" hint="Motion starts by itself. Turn off to pause motion and save battery." checked={settings.bgAnimate !== false} onChange={(v) => patch({ bgAnimate: v })} />
             <h4 className="ft-subhead">Animated</h4>
             <div className="ft-bggrid">
@@ -1122,7 +924,7 @@ const SettingsSheet = React.memo(function SettingsSheet({ settings, patch, bgSta
                 {bgStatus ? <span className="ft-field-hint">{bgStatus}</span> : null}
             </div>
             <div className="ft-field is-stacked"><span className="ft-field-label">Imported image or video fit</span><span className="ft-inrow"><button type="button" className={`ft-chipbtn ${settings.customFit !== 'contain' ? 'is-active' : ''}`} onClick={()=>patch({customFit:'cover'})}>Crop to fill</button><button type="button" className={`ft-chipbtn ${settings.customFit === 'contain' ? 'is-active' : ''}`} onClick={()=>patch({customFit:'contain'})}>Show whole image</button></span><span className="ft-field-hint">Crop fills the screen. Show whole image preserves the full composition with plain dark space where needed. No blur-fill or stretching.</span></div>
-            <Toggle label="Enhance imported images" hint="Sharpens and boosts images you paste or upload. Runs on your device only; images never leave this browser." checked={settings.enhance !== false} onChange={(v) => patch({ enhance: v })} />
+            <Toggle label="Sharpen imported images" hint="A local sharpen filter for images you paste or upload - it cannot add detail a small original never had. Runs on your device only; images never leave this browser." checked={settings.enhance !== false} onChange={(v) => patch({ enhance: v })} />
             <div className="ft-field">
                 <span className="ft-field-label">Darken background</span>
                 <input type="range" min={0.15} max={0.85} step={0.05} value={settings.scrim} aria-label="Background darkness" onChange={(e) => patch({ scrim: parseFloat(e.target.value) })} />
@@ -1697,4 +1499,4 @@ function MainApp() {
             </button>
         </div> : null}
     </div>;
-    }
+            }
