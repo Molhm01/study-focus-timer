@@ -8,7 +8,7 @@ From `app-source`, run `npm install`, `npx tsc --noEmit`, then `npm run build`. 
 
 ## Video backgrounds
 
-The timer has 101 additional distinct source videos, plus nine older selections kept under their saved IDs. Sources stream only when selected; no whole-catalog video download happens at startup. Portrait scenes on wide screens keep the whole composition with a plain dark matte, not enlarged blur-fill. Two video elements share the selected URL and overlap their end and beginning with a dissolve. This smooths the wrap, not a claim that source footage is naturally cyclic. Playback pauses when hidden, minimized or animation is turned off. Muted inline autoplay is attempted; a tap retries if the browser blocks it. Phones, low-power mode, network speed and source availability can affect playback. If a source fails, a local rainy photo remains and Settings offers other choices. The timer itself does not depend on the external video server.
+The timer has 101 longer study scenes with 20-76.71 seconds of native source footage, plus 110 earlier selections kept under their saved IDs (211 distinct source videos in total). Longer scenes are shown separately so short legacy clips are not counted toward the longer collection. Whole-scene containment preserves native-wide compositions on phones, with plain dark margins. A dissolve softens the repeat; it does not lengthen the unique source footage or guarantee a naturally perfect seam. Sources stream only when selected; no whole-catalog video download happens at startup. Portrait scenes on wide screens keep the whole composition with a plain dark matte, not enlarged blur-fill. Two video elements share the selected URL and overlap their end and beginning with a dissolve. End timing uses the verified complete-file duration, not the temporary duration Chromium can report while a fragmented MP4 is still loading. All211 source durations were checked from complete files with ffprobe. This smooths the wrap, not a claim that source footage is naturally cyclic. Playback pauses when hidden, minimized or animation is turned off. Muted inline autoplay is attempted; a tap retries if the browser blocks it. Phones, low-power mode, network speed and source availability can affect playback. If a source fails, a local rainy photo remains and Settings offers other choices. The timer itself does not depend on the external video server.
 
 Pixabay expressly permits direct video application embeds in https://pixabay.com/api/docs/ under Hotlinking, and app incorporation in https://pixabay.com/service/faq/ . Videos are under the Pixabay Content License, NOT described as copyright-free or owned by this project. https://pixabay.com/service/terms/ . No new standalone raw licensed video is included. The contact-sheet picker is a composed app-preview design with labels and framing, not a stock image collection or a set of externally hotlinked stills. Earlier raw files, if retained in git history, keep their original rights; this project does not grant their redistribution.
 
@@ -148,3 +148,106 @@ Nine real Joseph SARDIN / BigSoundBank CC0 recordings, with exact item credits i
 Image/video uploads offer Crop to fill or Show whole image, never stretch, and reset on reload. Direct image/video links depend on source permissions and cross-origin rules; public Pinterest pins may work through the image resolver, but private/deleted pins and short pin.it links cannot be guaranteed. Google search result pages are not direct images: use the original file link or upload it. The previous background is retained when import fails. The app cannot restore detail absent from a low-resolution source.
 
 Document Picture-in-Picture gives a browser-managed always-on-top timer on supporting desktop browsers (not universal). A minimal-chrome popup mirror is used elsewhere; browser settings control its chrome and pinning. The mirror is a control/display for the main timer, not an independent timer. Keep the main tab open. Spotify remains an official embed, not account synchronization; Spotify controls sign-in and playback availability.
+
+### Longer study scene sources
+- Rainy study window (60.09s): https://pixabay.com/videos/lofi-girl-study-lamp-rain-window-215407/
+- Rainlit reading nook (64s): https://pixabay.com/videos/ai-generated-anime-cozy-rain-297863/
+- Neon rainy lounge (60s): https://pixabay.com/videos/anime-background-rain-couch-265906/
+- Night desk journal (52.07s): https://pixabay.com/videos/girl-study-anime-cartoon-drawing-276498/
+- Umbrella city (61.17s): https://pixabay.com/videos/anime-lofi-cozy-rain-rainy-night-311563/
+- Neon alley puddles (24.88s): https://pixabay.com/videos/umbrellas-street-rain-anime-city-180170/
+- Moonlit river window (30.03s): https://pixabay.com/videos/window-moon-clouds-river-manga-229537/
+- Cabin porch fire (30s): https://pixabay.com/videos/ai-generated-porch-fireplace-cozy-211097/
+- Window cat at dusk (58.56s): https://pixabay.com/videos/lofi-chill-cat-cartoon-cozy-246535/
+- Rainy sofa cat (75.34s): https://pixabay.com/videos/lofi-cat-sleeping-cute-cartoon-246241/
+- Firelit cabin (30s): https://pixabay.com/videos/cozy-interior-fireplace-chimney-204116/
+- Lavender lounge (20s): https://pixabay.com/videos/ai-generated-girl-rain-rainy-248668/
+- City cat companion (60.17s): https://pixabay.com/videos/ai-generated-anime-cozy-rain-371447/
+- City blues (20.12s): https://pixabay.com/videos/ai-generated-city-night-rain-storm-379222/
+- Sleepy desk cat (64s): https://pixabay.com/videos/anime-lofi-cat-cute-cat-345856/
+- Lamp and sleeping cat (64s): https://pixabay.com/videos/anime-lofi-cat-cozy-rain-312345/
+- Rainy study companion (67.8s): https://pixabay.com/videos/girl-chill-rain-relax-relaxation-271841/
+- Rooftop study (72s): https://pixabay.com/videos/girl-chill-rain-relax-study-297736/
+- Sleeping hearth cat (58.69s): https://pixabay.com/videos/lofi-cat-fireplace-fire-sleeping-246242/
+- Dusk window cat (76.71s): https://pixabay.com/videos/lofi-cat-night-window-rain-cute-246243/
+- Candlelit library (30s): https://pixabay.com/videos/library-books-cozy-candle-rain-202823/
+- Old-town rain (32.87s): https://pixabay.com/videos/buildings-road-rain-street-shops-75368/
+- Storm at sea (58.52s): https://pixabay.com/videos/moon-sea-rain-thunder-dark-clouds-38271/
+- Library afternoon (22.21s): https://pixabay.com/videos/ai-generated-anime-girl-cozy-room-360380/
+- Night study wall (64s): https://pixabay.com/videos/anime-cozy-rain-rainy-night-310025/
+- City laptop glow (63.53s): https://pixabay.com/videos/anime-cozy-rain-rainy-night-330062/
+- Library dog (61.4s): https://pixabay.com/videos/anime-lofi-dog-cute-dog-345838/
+- Autumn porch (30s): https://pixabay.com/videos/ai-generated-porch-rain-rainy-day-211089/
+- Retro train cat (29.87s): https://pixabay.com/videos/cat-train-retro-chill-relax-anime-301247/
+- Cottage candlelight (30s): https://pixabay.com/videos/cozy-cabin-interior-log-trees-208856/
+- Rainy woodland lounge (30.03s): https://pixabay.com/videos/ai-generated-chill-living-room-257953/
+- Red rainy room (30.03s): https://pixabay.com/videos/living-room-cozy-fireplace-loop-258729/
+- Ancient forest (60.27s): https://pixabay.com/videos/tree-branches-rain-fog-dark-251562/
+- Mountain lodge window (30s): https://pixabay.com/videos/ai-generated-rain-fireplace-243696/
+- Classic hearth room (30s): https://pixabay.com/videos/ai-generated-living-room-fireplace-247096/
+- Moonlit lounge (60.06s): https://pixabay.com/videos/room-river-cozy-moon-168104/
+- Candlelit studio (30.06s): https://pixabay.com/videos/ai-generated-candles-room-spa-205001/
+- Round-door library (39.83s): https://pixabay.com/videos/room-fireplace-rain-coffee-study-182592/
+- Ember-lit room (60.12s): https://pixabay.com/videos/room-cozy-fireplace-cat-candles-166272/
+- Rainy bedroom (29.63s): https://pixabay.com/videos/cozy-moon-rain-summer-interior-120583/
+- Mountain lake bedroom (30.03s): https://pixabay.com/videos/ai-generated-rain-raining-weather-236040/
+- Hilltop sunset (60.06s): https://pixabay.com/videos/ai-generated-sunset-living-room-181971/
+- Round-door fire (30.03s): https://pixabay.com/videos/ai-generated-living-room-cozy-259293/
+- Snowy city window (60s): https://pixabay.com/videos/ai-generated-window-snow-winter-253904/
+- Sunset city lounge (60s): https://pixabay.com/videos/ai-generated-living-room-house-267347/
+- Forest library (30s): https://pixabay.com/videos/ai-generated-living-room-fireplace-208105/
+- Rainy sunset room (60.14s): https://pixabay.com/videos/cat-couch-living-room-cozy-room-156473/
+- Fireside tabby (30.08s): https://pixabay.com/videos/cozy-home-cabin-warm-tea-cup-201968/
+- Victorian fire (60.01s): https://pixabay.com/videos/nature-rain-cozy-fireplace-porch-108292/
+- Rainy mountain retreat (58.12s): https://pixabay.com/videos/ai-generated-bedroom-lake-rainy-201179/
+- Blue mountain bedroom (20.04s): https://pixabay.com/videos/ai-generated-room-cabin-cottage-208621/
+- Sunlit bookcase (31.98s): https://pixabay.com/videos/ai-generated-living-room-sun-cozy-204238/
+- Warm timber library (30s): https://pixabay.com/videos/ai-generated-living-room-cozy-205644/
+- Indoor garden library (30s): https://pixabay.com/videos/ai-generated-fireplace-living-room-205634/
+- Snowy fireplace bedroom (30s): https://pixabay.com/videos/ai-generated-living-room-cozy-snowy-209220/
+- Rainy high-rise (64.8s): https://pixabay.com/videos/dark-room-rain-outside-cinemagraph-337559/
+- Quiet bookshelf nook (30s): https://pixabay.com/videos/ai-generated-living-room-fireplace-210278/
+- Sunlit mountain lounge (30.03s): https://pixabay.com/videos/ai-generated-sofa-window-219025/
+- Classic book room (30.03s): https://pixabay.com/videos/cafe-animated-background-coffee-267920/
+- Golden reading room (30s): https://pixabay.com/videos/ai-generated-living-room-fireplace-208089/
+- Rain on glass (30.9s): https://pixabay.com/videos/dark-room-raining-videos-asmr-258614/
+- Sunset forest lounge (60.06s): https://pixabay.com/videos/ai-generated-living-room-cozy-181977/
+- Forest rain windows (60.14s): https://pixabay.com/videos/living-room-windows-rain-raindrops-167688/
+- Round-window lounge (60.12s): https://pixabay.com/videos/ai-generated-cottage-snow-188977/
+- Sunbeam lodge (30s): https://pixabay.com/videos/ai-generated-living-room-fireplace-208106/
+- Warm sunset lounge (60.06s): https://pixabay.com/videos/ai-generated-living-room-cat-sunset-181947/
+- Mountain study lounge (30.03s): https://pixabay.com/videos/cozy-relaxing-ambience-living-room-298922/
+- Sunlit green room (30s): https://pixabay.com/videos/ai-generated-living-room-fireplace-209881/
+- Rainy city apartment (60s): https://pixabay.com/videos/ai-generated-room-house-home-261757/
+- Rainy timber bedroom (30s): https://pixabay.com/videos/autumn-nature-cabin-forest-324169/
+- Mountain night retreat (60s): https://pixabay.com/videos/bedroom-home-indoors-window-sleep-340848/
+- Twilight pagoda (24.21s): https://pixabay.com/videos/five-story-tower-crescent-moon-night-184370/
+- Snowy shrine lantern (27.48s): https://pixabay.com/videos/shrine-lantern-winter-snow-night-266428/
+- Lantern street (30s): https://pixabay.com/videos/ai-generated-heavy-rain-japan-kyoto-225944/
+- Anime river sunset (60s): https://pixabay.com/videos/ai-generated-night-sky-stars-265909/
+- Violet Mount Fuji (30s): https://pixabay.com/videos/ai-generated-mountain-japan-nature-281165/
+- Snowy Kyoto lane (52.51s): https://pixabay.com/videos/snow-snowfall-pedestrian-old-town-153086/
+- Stormy mountain garden (25s): https://pixabay.com/videos/ai-generated-storm-garden-rain-185425/
+- Moonlit cherry pond (60.05s): https://pixabay.com/videos/pond-moon-night-stars-water-japan-158195/
+- Snowy shrine gate (60.05s): https://pixabay.com/videos/temple-snow-winter-japan-asia-189472/
+- Night library student (63.23s): https://pixabay.com/videos/girl-study-relaxing-alone-anime-214500/
+- Sunset headphones (64s): https://pixabay.com/videos/ai-generated-lofi-anime-night-314688/
+- Cozy room companion (64s): https://pixabay.com/videos/anime-lofi-girl-anime-girl-reading-345955/
+- Coffee shop hearth (30s): https://pixabay.com/videos/ai-generated-coffee-shop-fireplace-208093/
+- Garden porch (20s): https://pixabay.com/videos/ai-generated-porch-flowers-cozy-209201/
+- Tea by the fire (30s): https://pixabay.com/videos/cozy-cabin-interior-fireplace-204117/
+- Covered forest porch (30s): https://pixabay.com/videos/ai-generated-fireplace-chill-246984/
+- Round-door storybook (60s): https://pixabay.com/videos/ai-generated-living-room-house-267296/
+- Rainy fireside study (60.5s): https://pixabay.com/videos/landscape-nature-field-countryside-301045/
+- Moonclock lounge (30s): https://pixabay.com/videos/fireplace-home-cabin-house-nature-297472/
+- Snowy coffee shop (60s): https://pixabay.com/videos/ai-generated-snow-chill-lofi-242924/
+- Winter cafe (60s): https://pixabay.com/videos/ai-generated-coffee-shop-snow-chill-243342/
+- Open book garden (30.03s): https://pixabay.com/videos/bible-book-window-cozy-286806/
+- Snowy porch chair (30s): https://pixabay.com/videos/ai-generated-chill-soothing-244452/
+- Snowy cabin deck (30s): https://pixabay.com/videos/ai-generated-fireplace-campfire-244362/
+- Autumn porch hearth (30s): https://pixabay.com/videos/ai-generated-fireplace-porch-cozy-210707/
+- Dusk window reader (64s): https://pixabay.com/videos/anime-cozy-evening-night-ambience-309388/
+- Neon headphones (59.99s): https://pixabay.com/videos/lofi-girl-chill-for-chill-study-265815/
+- Pale winter lounge (30.03s): https://pixabay.com/videos/ai-generated-fireplace-home-house-266042/
+- Pink-haired study (30s): https://pixabay.com/videos/girl-study-meditation-sleep-rest-325442/
+- Night laptop study (59.99s): https://pixabay.com/videos/lofi-girl-chill-for-chill-study-265816/
