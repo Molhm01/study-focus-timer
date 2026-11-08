@@ -218,3 +218,7 @@ body { background: #101418; }
 .ft-pip-bar span, .ft-popout-bar span { display: block; height: 100%; background: var(--ft-accent, #9fd8c6); border-radius: 999px; transition: width 0.9s linear; }
 .ft-pip-btns, .ft-popout-btns { display: flex; gap: 8px; align-items: center; }
 .ft-popout-note { font-size: 12px; opacity: 0.6; text-align: center; max-width: 260px; margin: 6px 0 0; }
+
+.ft-scene-stage{position:fixed;inset:0;z-index:-3;overflow:hidden}.ft-scene-stage .ft-bg{z-index:0}.ft-extra-scenes summary{cursor:pointer;color:var(--muted);padding:12px 0}.ft-extra-scenes>.ft-bgswatches{margin-top:12px}
+
+.ft-stream-status{position:absolute;bottom:20px;left:20px;right:20px;font-size:13px;color:#fff;text-align:center;z-index:4;text-shadow:0 1px 4px #000}
