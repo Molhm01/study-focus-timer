@@ -732,6 +732,7 @@ export function App() {
     const bg = settings.background;
     useEffect(() => {
         let alive = true;
+        if (!settingsSaved.ready) return; // wait for the saved pick so we never fetch a photo we will not use
         if (bg.kind === 'builtin') {
             const id = bg.id && PHOTO_LOADERS[bg.id] ? bg.id : 'rain';
             if (photoCache[id]) setBuiltinSrc(photoCache[id]);
@@ -741,7 +742,8 @@ export function App() {
             }
         }
         return () => { alive = false; };
-    }, [bg.kind, bg.id]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [settingsSaved.ready, bg.kind, bg.id]);
 
     // ---------- session persistence ----------
     const sessionRestoredRef = useRef(false);
