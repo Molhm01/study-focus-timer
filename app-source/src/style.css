@@ -224,3 +224,50 @@ body { background: #101418; }
 .ft-stream-status{position:absolute;bottom:20px;left:20px;right:20px;font-size:13px;color:#fff;text-align:center;z-index:4;text-shadow:0 1px 4px #000}
 
 .ft-bgswatch-name{background:#111820e8;bottom:0;padding:3px 5px!important;font-size:11px!important;line-height:1.2!important;max-height:28px;overflow:hidden}
+
+/* ---------- profile & progression panel ---------- */
+.pf-hero { display: flex; align-items: center; gap: 14px; }
+.pf-hero-info { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+.pf-name { background: none; border: 0; color: #fff; font-size: 17px; font-weight: 600; text-align: left; cursor: pointer; padding: 0; font-family: inherit; }
+.pf-name:hover .pf-name-pen { opacity: 0.9; }
+.pf-name-pen { font-size: 12px; opacity: 0.45; }
+.pf-nameedit { display: flex; gap: 8px; align-items: center; }
+.pf-nameedit input { flex: 1; min-width: 0; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.25); border-radius: 10px; color: #fff; font-size: 15px; padding: 8px 10px; font-family: inherit; }
+.pf-title { font-size: 13px; color: var(--ft-accent, #9fd8c6); font-weight: 600; }
+.pf-live { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; opacity: 0.9; margin-top: 2px; }
+.pf-live-dot { width: 8px; height: 8px; border-radius: 50%; background: #6fe3a5; box-shadow: 0 0 8px #6fe3a5; }
+.pf-level-badge { flex: 0 0 auto; background: var(--ft-accent, #9fd8c6); color: #1c1c1c; font-weight: 700; font-size: 13px; border-radius: 999px; padding: 6px 12px; }
+
+.pf-xpwrap { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+.pf-xpbar { flex: 1; height: 8px; border-radius: 999px; background: rgba(255,255,255,0.14); overflow: hidden; }
+.pf-xpbar span { display: block; height: 100%; border-radius: 999px; background: var(--ft-accent, #9fd8c6); transition: width 0.5s ease; }
+.pf-xpnum { font-size: 12px; opacity: 0.7; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+.pf-banner { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; padding: 10px 14px; border-radius: 12px; background: rgba(159,216,198,0.14); border: 1px solid rgba(159,216,198,0.4); font-size: 13px; }
+
+.pf-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.pf-stat { background: rgba(255,255,255,0.06); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 2px; }
+.pf-stat strong { font-size: 15px; font-weight: 650; }
+.pf-stat span { font-size: 11px; opacity: 0.6; }
+
+.pf-subhead { font-size: 12px; opacity: 0.55; margin: 14px 0 6px; font-weight: 600; }
+.pf-bases { display: flex; flex-wrap: wrap; gap: 8px; }
+.pf-basebtn { background: rgba(255,255,255,0.06); border: 2px solid transparent; border-radius: 14px; padding: 4px; cursor: pointer; line-height: 0; }
+.pf-basebtn.is-active { border-color: var(--ft-accent, #9fd8c6); }
+.pf-gear { display: flex; flex-wrap: wrap; gap: 8px; }
+.pf-gearbtn { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: #eee; border-radius: 999px; font-size: 12px; padding: 7px 12px; cursor: pointer; font-family: inherit; }
+.pf-gearbtn.is-active { background: var(--ft-accent, #9fd8c6); color: #1c1c1c; border-color: transparent; font-weight: 600; }
+.pf-gearbtn.is-locked { opacity: 0.5; cursor: default; }
+
+.pf-achievements { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.pf-achievements li { display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,0.05); border-radius: 12px; padding: 9px 12px; opacity: 0.55; }
+.pf-achievements li.is-got { opacity: 1; }
+.pf-achievements li.is-got .pf-ach-check { color: #ffd166; }
+.pf-ach-check { font-size: 16px; }
+.pf-ach-body { display: flex; flex-direction: column; }
+.pf-ach-body strong { font-size: 13px; }
+.pf-ach-body span { font-size: 12px; opacity: 0.65; }
+
+.pf-account { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.pf-account-name { margin: 0; font-size: 14px; }
+.pf-linkbtn { background: none; border: 0; color: var(--ft-accent, #9fd8c6); cursor: pointer; font-size: inherit; font-family: inherit; text-decoration: underline; padding: 0; }
