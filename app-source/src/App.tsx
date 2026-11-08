@@ -79,7 +79,7 @@ interface Settings {
     ambient: string; ambientVolume: number;
     notifications: boolean; keepAwake: boolean;
     background: { kind: BgKind; id?: string; source?: string };
-    bgAnimate: boolean;
+    bgAnimate: boolean; customFit: 'cover' | 'contain';
     scrim: number;
     accent: string; font: string;
     clockStyle: 'ring' | 'bar' | 'minimal'; clockSize: 's' | 'm' | 'l';
@@ -100,7 +100,7 @@ const DEFAULT_SETTINGS: Settings = {
     ambient: 'none', ambientVolume: 0.5,
     notifications: false, keepAwake: false,
     background: { kind: 'builtin', id: 'rain' },
-    bgAnimate: true,
+    bgAnimate: true, customFit: 'cover',
     scrim: 0.45,
     accent: '#9fd8c6', font: 'sans',
     clockStyle: 'ring', clockSize: 'm',
@@ -588,13 +588,13 @@ const SceneVideo = React.memo(function SceneVideo({ scene, paused, animate }: { 
         document.addEventListener('visibilitychange',sync);window.addEventListener('pointerdown',sync);
         return()=>{dead=true;cancelAnimationFrame(raf);vs.forEach(v=>v.pause());document.removeEventListener('visibilitychange',sync);window.removeEventListener('pointerdown',sync);};
     },[src]);
-    return <div ref={root} className="ft-scene-stage" key={src} style={{backgroundImage:fallback?`url(${fallback})`:undefined,backgroundSize:'cover',backgroundPosition:'center'}}>{error&&<span className="ft-stream-status">This scene couldn't load. Choose another background in Settings.</span>}{[0,1].map(n=><video onError={()=>setError(true)} key={n} className="ft-bg ft-bgvideo" src={src} muted playsInline disablePictureInPicture disableRemotePlayback preload="auto" aria-hidden="true" />)}</div>;
+    return <div ref={root} className="ft-scene-stage" key={src} style={{backgroundImage:error&&fallback?`url(${fallback})`:'linear-gradient(135deg,#182226,#090d13)',backgroundSize:'cover',backgroundPosition:'center'}}>{error&&<span className="ft-stream-status">This scene couldn't load. Choose another background in Settings.</span>}{[0,1].map(n=><video onError={()=>setError(true)} style={{objectFit:portrait?'cover':'contain'}} key={n} className="ft-bg ft-bgvideo" src={src} muted playsInline disablePictureInPicture disableRemotePlayback preload="auto" aria-hidden="true" />)}</div>;
 });
 
 interface BgMedia { url: string; kind: 'image' | 'video' }
-const Background = React.memo(function Background({ kind, id, scrim, builtinSrc, linkBg, uploadBg, paused, animate }: {
+const Background = React.memo(function Background({ kind, id, scrim, builtinSrc, linkBg, uploadBg, paused, animate, customFit }: {
     kind: BgKind; id?: string; scrim: number;
-    builtinSrc: string | null; linkBg: BgMedia | null; uploadBg: BgMedia | null; paused?: boolean; animate: boolean;
+    builtinSrc: string | null; linkBg: BgMedia | null; uploadBg: BgMedia | null; paused?: boolean; animate: boolean; customFit: 'cover' | 'contain';
 }) {
     let style: React.CSSProperties = {};
     if (kind === 'builtin' && builtinSrc) style = { backgroundImage: `url(${builtinSrc})` };
@@ -602,6 +602,7 @@ const Background = React.memo(function Background({ kind, id, scrim, builtinSrc,
     else if (kind === 'link' && linkBg?.kind === 'image') style = { backgroundImage: `url(${linkBg.url})` };
     else if (kind === 'upload' && uploadBg?.kind === 'image') style = { backgroundImage: `url(${uploadBg.url})` };
     else if (kind === 'link' || kind === 'upload' || kind === 'builtin') style = { backgroundImage: GRADIENTS[0].css };
+    if ((kind === 'link' || kind === 'upload') && style.backgroundImage) style = {...style, backgroundSize: customFit, backgroundRepeat:'no-repeat',backgroundColor:'#101418'};
     const animId = ANIMATED_BGS.some((a) => a.id === id) ? id! : 'aurora';
     const scene = kind === 'scene' ? [...SCENES, ...SCENES_EXTRA].find((s) => s.id === id) : undefined;
     const linkVideo = kind === 'link' && linkBg?.kind === 'video' ? linkBg.url : kind === 'upload' && uploadBg?.kind === 'video' ? uploadBg.url : null;
@@ -609,7 +610,7 @@ const Background = React.memo(function Background({ kind, id, scrim, builtinSrc,
         {scene
             ? <SceneVideo scene={scene} paused={!!paused} animate={animate} />
             : linkVideo
-                ? <CustomVideo src={linkVideo} paused={!!paused} animate={animate} />
+                ? <CustomVideo src={linkVideo} paused={!!paused} animate={animate} fit={customFit} />
                 : kind === 'animated'
                     ? <div className={`ft-anim ft-anim-${animId}`} aria-hidden="true"><i /><i /><i /></div>
                     : <div className="ft-bg" style={style} />}
@@ -617,7 +618,7 @@ const Background = React.memo(function Background({ kind, id, scrim, builtinSrc,
     </>;
 });
 
-const CustomVideo = React.memo(function CustomVideo({ src, paused, animate }: { src: string; paused: boolean; animate: boolean }) {
+const CustomVideo = React.memo(function CustomVideo({ src, paused, animate, fit }: { src: string; paused: boolean; animate: boolean; fit: 'cover' | 'contain' }) {
     const ref = useRef<HTMLVideoElement | null>(null);
     useEffect(() => {
         const v = ref.current;
@@ -633,7 +634,7 @@ const CustomVideo = React.memo(function CustomVideo({ src, paused, animate }: { 
         return () => { document.removeEventListener('visibilitychange', sync); window.removeEventListener('pointerdown', retry); };
     }, [paused, animate, src]);
     if (!animate) return null;
-    return <video ref={ref} className="ft-bg ft-bgvideo" src={src} muted loop autoPlay playsInline preload="auto" aria-hidden="true" />;
+    return <video ref={ref} className="ft-bg ft-bgvideo" style={{objectFit:fit,backgroundColor:'#101418'}} src={src} muted loop autoPlay playsInline preload="auto" aria-hidden="true" />;
 });
 
 const SceneSwatch = React.memo(function SceneSwatch({ scene, active, onPick }: { scene: SceneDef; active: boolean; onPick: () => void }) {
@@ -923,6 +924,7 @@ const SettingsSheet = React.memo(function SettingsSheet({ settings, patch, bgSta
                 </span>
                 {bgStatus ? <span className="ft-field-hint">{bgStatus}</span> : null}
             </div>
+            <div className="ft-field is-stacked"><span className="ft-field-label">Imported image or video fit</span><span className="ft-inrow"><button type="button" className={`ft-chipbtn ${settings.customFit !== 'contain' ? 'is-active' : ''}`} onClick={()=>patch({customFit:'cover'})}>Crop to fill</button><button type="button" className={`ft-chipbtn ${settings.customFit === 'contain' ? 'is-active' : ''}`} onClick={()=>patch({customFit:'contain'})}>Show whole image</button></span><span className="ft-field-hint">Crop fills the screen. Show whole image preserves the full composition with plain dark space where needed. No blur-fill or stretching.</span></div>
             <div className="ft-field">
                 <span className="ft-field-label">Darken background</span>
                 <input type="range" min={0.15} max={0.85} step={0.05} value={settings.scrim} aria-label="Background darkness" onChange={(e) => patch({ scrim: parseFloat(e.target.value) })} />
@@ -1418,7 +1420,7 @@ function MainApp() {
     const spotifySrc = settings.spotify ? spotifyEmbedUrl(settings.spotify) : null;
 
     return <div className={`ft-root ${compact ? 'is-compact' : ''}`} style={{ ['--ft-accent' as string]: settings.accent, ['--ft-font' as string]: fontCss } as React.CSSProperties}>
-        <Background kind={bg.kind} id={bg.id} scrim={settings.scrim} builtinSrc={builtinSrc} linkBg={linkBg} uploadBg={uploadBgMedia} paused={compact} animate={settings.bgAnimate !== false} />
+        <Background kind={bg.kind} id={bg.id} scrim={settings.scrim} builtinSrc={builtinSrc} linkBg={linkBg} uploadBg={uploadBgMedia} paused={compact} animate={settings.bgAnimate !== false} customFit={settings.customFit || 'cover'} />
 
         <TopBar chip={chip} panel={panel} fullscreenSupported={fullscreenSupported} onFullscreen={toggleFullscreen} onTasks={toggleTasks} onSettings={toggleSettings} onMinimize={minimize} onPopout={popOut} />
 
@@ -1494,4 +1496,4 @@ function MainApp() {
             </button>
         </div> : null}
     </div>;
-        }
+}
