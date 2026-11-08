@@ -72,9 +72,10 @@ under 250 KB). GitHub Pages then republishes automatically from `main` /
 
 ## Animated video scenes
 
-`src/scenes/<id>.mp4` (+ matching `.jpg` poster) are short muted loop clips shown as
-animated backgrounds. They build into lazy `scene-*.js` chunks that load only when
-a visitor picks that scene, and pause when the tab is hidden or the timer is
+`src/scenes-b64/<id>.mp4.js` (+ matching `<id>.jpg.js` poster) are short muted loop
+clips stored as base64 text modules, so the whole app builds from a fresh clone
+with no binary assets. They build into lazy `scene-*.js` chunks that load only
+when a visitor picks that scene, and pause when the tab is hidden or the timer is
 minimized. With reduced-motion on, only the poster image shows.
 
 Sources (all Pixabay, free to use under the Pixabay Content License
@@ -87,6 +88,7 @@ allowed, modification allowed, no attribution required):
 - water-garden.mp4 - "Gardens, Loop, Waterfall" https://pixabay.com/videos/gardens-loop-waterfall-meditation-290959/
 
 Re-encoded for the web with ffmpeg (720px wide, H.264 yuv420p, no audio,
-faststart, ~CRF 30, max 10s). To add a scene: drop `<id>.mp4` and a small
-`<id>.jpg` poster in `src/scenes/`, add it to `SCENES`, `SCENE_VIDEO_LOADERS`
-and `SCENE_POSTER_LOADERS` in `src/App.tsx`, then rebuild.
+faststart, ~CRF 30, max 10s). To add a scene: encode `<id>.mp4` and a small
+`<id>.jpg` poster, write each as a base64 module in `src/scenes-b64/`
+(`export default "data:video/mp4;base64,..."`), add it to `SCENES`,
+`SCENE_VIDEO_LOADERS` and `SCENE_POSTER_LOADERS` in `src/App.tsx`, then rebuild.
