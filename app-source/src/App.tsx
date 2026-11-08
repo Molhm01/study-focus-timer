@@ -508,13 +508,13 @@ const SettingsSheet = React.memo(function SettingsSheet({ settings, patch, bgSta
         </section>
 
         <section>
-            <h3>Music</h3>
+            <h3>Music (Spotify player)</h3>
             <div className="ft-chips">
                 {SPOTIFY_PRESETS.map((p) => <button key={p.id} type="button" className={`ft-chipbtn ${settings.spotify === p.id ? 'is-active' : ''}`} onClick={() => { setSpStatus(''); patch({ spotify: p.id, spotifyOpen: true }); }}>{p.name}</button>)}
             </div>
             <div className="ft-field is-stacked">
                 <span className="ft-field-label">Any Spotify link</span>
-                <span className="ft-field-hint">Paste an open.spotify.com playlist, album, track or podcast link (in Spotify: Share - Copy link). Music plays in Spotify's official player at the bottom of the page: sign in to Spotify inside the player for full songs; without a Spotify sign-in it plays 30-second previews.</span>
+                <span className="ft-field-hint">Paste an open.spotify.com playlist, album, track or podcast link (in Spotify: Share - Copy link). Music plays in Spotify's official player at the bottom of the page; this is not account sync. Spotify decides what plays: usually full songs when you sign in to Spotify inside the player, 30-second previews when signed out; podcast episodes usually play in full.</span>
                 <span className="ft-inrow">
                     <input className="ft-textinput" value={spInput} placeholder="https://open.spotify.com/playlist/…" onChange={(e) => setSpInput(e.target.value)} inputMode="url" />
                     <button type="button" className="ft-ghost is-compact" onClick={applySpotify}>Use link</button>
