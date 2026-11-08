@@ -567,7 +567,7 @@ const SceneVideo = React.memo(function SceneVideo({ scene, paused, animate }: { 
     const control = useRef({ paused, animate }); control.current = { paused, animate };
     const [portrait, setPortrait] = useState(() => window.matchMedia('(orientation: portrait)').matches);
     useEffect(() => { const q=window.matchMedia('(orientation: portrait)');const f=()=>setPortrait(q.matches);q.addEventListener('change',f);return()=>q.removeEventListener('change',f); }, []);
-    const o=portrait?'p':'l';const src=scene.url || sceneMedia(scene.id,o,'mp4');
+    const o=portrait?'p':'l';const src=scene.url ? (portrait ? scene.url : scene.url.replace('_medium.mp4','_large.mp4')) : sceneMedia(scene.id,o,'mp4');
     useEffect(() => {
         setError(false);const vs=Array.from<HTMLVideoElement>(root.current!.querySelectorAll('video'));let active=0,blending=false,dead=false,raf=0,started=false;
         const play=(v:HTMLVideoElement)=>v.play().catch(()=>{});
@@ -1494,4 +1494,4 @@ function MainApp() {
             </button>
         </div> : null}
     </div>;
-}
+        }
