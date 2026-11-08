@@ -351,8 +351,12 @@ function sceneLadder(url: string, mobile: boolean): string[] {
     const first = mobile ? swap('_small.mp4') : swap('_medium.mp4');
     return [first, ...uniq.filter((u) => u !== first)];
 }
+function posterSrc(scene: SceneDef): string | undefined {
+    const inline = (window as any).__SFT_POSTERS?.[scene.id];
+    return inline || scene.poster;
+}
 function tileBackdrop(scene: SceneDef, catalog: string): React.CSSProperties {
-    if (scene.poster) return { backgroundImage: `url(${scene.poster})`, backgroundSize: 'cover', backgroundPosition: 'center' };
+    const __p = posterSrc(scene); if (__p) return { backgroundImage: `url(${__p})`, backgroundSize: 'cover', backgroundPosition: 'center' };
     if (!catalog || scene.tile == null) return { backgroundImage: 'linear-gradient(135deg,#182226,#090d13)' };
     const cols = scene.preview === 'curated' ? 3 : 8, rows = scene.preview === 'curated' ? 3 : 13;
     return { backgroundImage: `url(${catalog})`, backgroundSize: `${cols * 100}% ${rows * 100}%`, backgroundPosition: `${(scene.tile % cols) * 100 / (cols - 1)}% ${Math.floor(scene.tile / cols) * 100 / (rows - 1)}%` };
@@ -801,7 +805,7 @@ const CustomVideo = React.memo(function CustomVideo({ src, paused, animate, fit 
 const SceneSwatch = React.memo(function SceneSwatch({ scene, active, onPick }: { scene: SceneDef; active: boolean; onPick: () => void }) {
     const catalog=useImageUrl(scene.preview || 'catalog');const cols=scene.preview==='curated'?3:8,rows=scene.preview==='curated'?3:13;
     return <button type="button" className={`ft-bgswatch ft-bgswatch-named ${active ? 'is-active' : ''}`} aria-label={`${scene.name} animated scene`} onClick={onPick}>
-        {scene.poster ? <img className="ft-bgswatch-img" src={scene.poster} alt="" loading="lazy" decoding="async" /> : scene.tile != null ? <span className="ft-bgswatch-img" style={{backgroundImage: catalog ? `url(${catalog})` : undefined, backgroundSize:`${cols*100}% ${rows*100}%`,backgroundPosition: `${(scene.tile % cols)*100/(cols-1)}% ${Math.floor(scene.tile/cols)*100/(rows-1)}%`}} /> : <img className="ft-bgswatch-img" src={scenePoster(scene, 'p')} alt="" loading="lazy" decoding="async" />}
+        {posterSrc(scene) ? <img className="ft-bgswatch-img" src={posterSrc(scene)} alt="" loading="lazy" decoding="async" /> : scene.tile != null ? <span className="ft-bgswatch-img" style={{backgroundImage: catalog ? `url(${catalog})` : undefined, backgroundSize:`${cols*100}% ${rows*100}%`,backgroundPosition: `${(scene.tile % cols)*100/(cols-1)}% ${Math.floor(scene.tile/cols)*100/(rows-1)}%`}} /> : <img className="ft-bgswatch-img" src={scenePoster(scene, 'p')} alt="" loading="lazy" decoding="async" />}
         <span className="ft-bgswatch-name">{scene.name}</span>
     </button>;
 });
@@ -1687,4 +1691,4 @@ function MainApp() {
             </button>
         </div> : null}
     </div>;
-}
+    }
