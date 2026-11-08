@@ -125,30 +125,55 @@ const SCENES = [
     { id: 'rainy-window', name: 'Rainy window' },
     { id: 'misty-river', name: 'Misty river' },
     { id: 'water-garden', name: 'Water garden' },
+    { id: 'sakura-night', name: 'Island moon' },
+    { id: 'night-train', name: 'Night train' },
+    { id: 'japan-street', name: 'Sakura street' },
+    { id: 'cozy-window', name: 'Rainy desk' },
+    { id: 'balcony-dusk', name: 'Evening balcony' },
 ];
-const SCENE_VIDEO_LOADERS: Record<string, () => Promise<{ default: string }>> = {
-    shrine: () => import('./scenes-b64/shrine.mp4.js'),
-    'rainy-window': () => import('./scenes-b64/rainy-window.mp4.js'),
-    'misty-river': () => import('./scenes-b64/misty-river.mp4.js'),
-    'water-garden': () => import('./scenes-b64/water-garden.mp4.js'),
+// Scene media are real files in public/scenes/ (copied to dist on build): <id>-p/-l .mp4 (portrait
+// 1080x1920 / landscape 1920x1080) and matching .jpg posters. Real URLs (not blob/data URIs) so
+// playback works on iOS Safari; files load only when a scene is picked or its poster is shown.
+// Actual committed filenames (GitHub's web upload UI prefixed each name with a counter - see README).
+const SCENE_FILES: Record<string, string> = {
+    'balcony-dusk-l.jpg': '53-balcony-dusk-l.jpg',
+    'balcony-dusk-l.mp4': '32-balcony-dusk-l.mp4',
+    'balcony-dusk-p.jpg': '52-balcony-dusk-p.jpg',
+    'balcony-dusk-p.mp4': '31-balcony-dusk-p.mp4',
+    'cozy-window-l.jpg': '51-cozy-window-l.jpg',
+    'cozy-window-l.mp4': '30-cozy-window-l.mp4',
+    'cozy-window-p.jpg': '50-cozy-window-p.jpg',
+    'cozy-window-p.mp4': '29-cozy-window-p.mp4',
+    'japan-street-l.jpg': '49-japan-street-l.jpg',
+    'japan-street-l.mp4': '34-japan-street-l.mp4',
+    'japan-street-p.jpg': '48-japan-street-p.jpg',
+    'japan-street-p.mp4': '35-japan-street-p.mp4',
+    'misty-river-l.jpg': '40-misty-river-l.jpg',
+    'misty-river-l.mp4': '22-misty-river-l.mp4',
+    'misty-river-p.jpg': '39-misty-river-p.jpg',
+    'misty-river-p.mp4': '21-misty-river-p.mp4',
+    'night-train-l.jpg': '47-night-train-l.jpg',
+    'night-train-l.mp4': '28-night-train-l.mp4',
+    'night-train-p.jpg': '46-night-train-p.jpg',
+    'night-train-p.mp4': '27-night-train-p.mp4',
+    'rainy-window-l.jpg': '41-rainy-window-l.jpg',
+    'rainy-window-l.mp4': '20-rainy-window-l.mp4',
+    'rainy-window-p.jpg': '37-rainy-window-p.jpg',
+    'rainy-window-p.mp4': '17-rainy-window-p.mp4',
+    'sakura-night-l.jpg': '45-sakura-night-l.jpg',
+    'sakura-night-l.mp4': '26-sakura-night-l.mp4',
+    'sakura-night-p.jpg': '44-sakura-night-p.jpg',
+    'sakura-night-p.mp4': '25-sakura-night-p.mp4',
+    'shrine-l.jpg': '10-shrine-l.jpg',
+    'shrine-l.mp4': '19-shrine-l.mp4',
+    'shrine-p.jpg': '36-shrine-p.jpg',
+    'shrine-p.mp4': '18-shrine-p.mp4',
+    'water-garden-l.jpg': '43-water-garden-l.jpg',
+    'water-garden-l.mp4': '24-water-garden-l.mp4',
+    'water-garden-p.jpg': '42-water-garden-p.jpg',
+    'water-garden-p.mp4': '23-water-garden-p.mp4'
 };
-const SCENE_POSTER_LOADERS: Record<string, () => Promise<{ default: string }>> = {
-    shrine: () => import('./scenes-b64/shrine.jpg.js'),
-    'rainy-window': () => import('./scenes-b64/rainy-window.jpg.js'),
-    'misty-river': () => import('./scenes-b64/misty-river.jpg.js'),
-    'water-garden': () => import('./scenes-b64/water-garden.jpg.js'),
-};
-const sceneVideoCache: Record<string, string> = {};
-const scenePosterCache: Record<string, string> = {};
-
-function dataUriToBlobUrl(dataUri: string): string {
-    const comma = dataUri.indexOf(',');
-    const mime = dataUri.slice(5, comma).replace(';base64', '');
-    const bin = atob(dataUri.slice(comma + 1));
-    const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    return URL.createObjectURL(new Blob([bytes], { type: mime }));
-}
+const sceneMedia = (id: string, orientation: 'p' | 'l', ext: 'mp4' | 'jpg') => `scenes/${SCENE_FILES[`${id}-${orientation}.${ext}`]}`;
 
 const ACCENTS = [
     { id: 'mint', name: 'Mint', value: '#9fd8c6' },
@@ -343,6 +368,17 @@ function spotifyEmbedUrl(source: string): string | null {
     return m ? `https://open.spotify.com/embed/${m[1].toLowerCase()}/${m[2]}?theme=0` : null;
 }
 
+
+// ---------- inline SVG icons (unicode glyphs render as boxes on some devices) ----------
+const SvgIcon = ({ d, vb = 24 }: { d: string; vb?: number }) => (
+    <svg width="18" height="18" viewBox={`0 0 ${vb} ${vb}`} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d.split('|').map((p, i) => <path key={i} d={p} />)}</svg>
+);
+const ICON_FULLSCREEN = 'M4 9V4h5|M20 9V4h-5|M4 15v5h5|M20 15v5h-5';
+const ICON_MINIMIZE = 'M5 12h14';
+const ICON_TASKS = 'M4 6h16|M4 12h16|M4 18h10';
+const ICON_SETTINGS = 'M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7|M12 2.5v3|M12 18.5v3|M4.9 4.9l2.2 2.2|M16.9 16.9l2.2 2.2|M2.5 12h3|M18.5 12h3|M4.9 19.1l2.2-2.2|M16.9 7.1l2.2-2.2';
+const ICON_CLOSE = 'M6 6l12 12|M18 6L6 18';
+const ICON_PLAY = 'M8 5.5v13l11-6.5z';
 // ---------- small ui helpers ----------
 function fmt(ms: number) {
     const total = Math.max(0, Math.round(ms / 1000));
@@ -378,35 +414,39 @@ function Toggle({ label, hint, checked, onChange }: { label: string; hint?: stri
 // ---------- memoized subtrees: the ticking clock must not re-render these ----------
 const SceneVideo = React.memo(function SceneVideo({ id, paused }: { id: string; paused: boolean }) {
     const ref = useRef<HTMLVideoElement | null>(null);
-    const [urls, setUrls] = useState<{ video: string; poster: string } | null>(null);
     const [reduceMotion] = useState(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const [portrait, setPortrait] = useState(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(orientation: portrait)').matches);
+    const [motionOverride, setMotionOverride] = useState(false);
     useEffect(() => {
-        let alive = true;
-        const vLoader = SCENE_VIDEO_LOADERS[id];
-        if (!vLoader) return;
-        const pLoader = SCENE_POSTER_LOADERS[id];
-        Promise.all([vLoader(), pLoader ? pLoader() : Promise.resolve(null)]).then(([v, p]) => {
-            if (!alive) return;
-            const video = sceneVideoCache[id] || (sceneVideoCache[id] = dataUriToBlobUrl(v.default));
-            const poster = p ? (scenePosterCache[id] || (scenePosterCache[id] = p.default)) : '';
-            setUrls({ video, poster });
-        }).catch(() => { /* keep blank fallback */ });
-        return () => { alive = false; };
-    }, [id]);
+        const mq = window.matchMedia('(orientation: portrait)');
+        const fn = () => setPortrait(mq.matches);
+        if (mq.addEventListener) mq.addEventListener('change', fn);
+        return () => { if (mq.removeEventListener) mq.removeEventListener('change', fn); };
+    }, []);
     useEffect(() => {
         const v = ref.current;
-        if (!v || reduceMotion || !urls) return;
+        if (!v || reduceMotion) return;
         const sync = () => {
             if (paused || document.hidden) v.pause();
-            else v.play().catch(() => { /* autoplay blocked: poster stays */ });
+            else v.play().catch(() => { /* autoplay blocked (e.g. low power mode): poster stays, next tap retries */ });
         };
         sync();
+        // iOS low power mode only allows playback from a user gesture: retry on any tap.
+        const retry = () => { if (!paused && !document.hidden) v.play().catch(() => { /* still blocked */ }); };
         document.addEventListener('visibilitychange', sync);
-        return () => document.removeEventListener('visibilitychange', sync);
-    }, [paused, reduceMotion, id, urls]);
-    if (!urls) return <div className="ft-bg" />;
-    if (reduceMotion) return <img className="ft-bg ft-bgvideo" src={urls.poster} alt="" aria-hidden="true" />;
-    return <video ref={ref} className="ft-bg ft-bgvideo" src={urls.video} poster={urls.poster || undefined} muted loop autoPlay playsInline preload="auto" aria-hidden="true" />;
+        window.addEventListener('pointerdown', retry);
+        return () => { document.removeEventListener('visibilitychange', sync); window.removeEventListener('pointerdown', retry); };
+    }, [paused, reduceMotion, id, portrait]);
+    const o = portrait ? 'p' : 'l';
+    const poster = sceneMedia(id, o, 'jpg');
+    if (reduceMotion && !motionOverride) return <>
+        <img className="ft-bg ft-bgvideo" src={poster} alt="" aria-hidden="true" />
+        <button type="button" className="ft-motionplay" aria-label="Play background animation" onClick={() => setMotionOverride(true)}><SvgIcon d={ICON_PLAY} /></button>
+    </>;
+    return <>
+        <img className="ft-bg ft-bgvideo" src={poster} alt="" aria-hidden="true" />
+        <video ref={ref} key={o} className="ft-bg ft-bgvideo" src={sceneMedia(id, o, 'mp4')} poster={poster} muted loop autoPlay playsInline preload="auto" aria-hidden="true" />
+    </>;
 });
 
 const Background = React.memo(function Background({ kind, id, scrim, builtinSrc, linkBgUrl, uploadBgUrl, paused }: {
@@ -431,15 +471,7 @@ const Background = React.memo(function Background({ kind, id, scrim, builtinSrc,
 });
 
 const SceneSwatch = React.memo(function SceneSwatch({ id, name, active, onPick }: { id: string; name: string; active: boolean; onPick: () => void }) {
-    const [src, setSrc] = useState<string | null>(scenePosterCache[id] || null);
-    useEffect(() => {
-        let alive = true;
-        if (!scenePosterCache[id] && SCENE_POSTER_LOADERS[id]) {
-            SCENE_POSTER_LOADERS[id]().then((m) => { scenePosterCache[id] = m.default; if (alive) setSrc(m.default); }).catch(() => { /* keep placeholder */ });
-        }
-        return () => { alive = false; };
-    }, [id]);
-    return <button type="button" className={`ft-bgswatch ${active ? 'is-active' : ''}`} style={src ? { backgroundImage: `url(${src})` } : undefined} aria-label={`${name} animated scene`} onClick={onPick} />;
+    return <button type="button" className={`ft-bgswatch ft-bgswatch-named ${active ? 'is-active' : ''}`} style={{ backgroundImage: `url(${sceneMedia(id, 'p', 'jpg')})` }} aria-label={`${name} animated scene`} onClick={onPick}><span className="ft-bgswatch-name">{name}</span></button>;
 });
 
 const BgSwatch = React.memo(function BgSwatch({ id, name, active, onPick }: { id: string; name: string; active: boolean; onPick: () => void }) {
@@ -462,10 +494,10 @@ const TopBar = React.memo(function TopBar({ chip, panel, fullscreenSupported, on
         <span className="ft-brand">Study focus</span>
         {chip ? <span className="ft-chip" title="Today's completed focus time">{chip}</span> : null}
         <span className="ft-topbar-actions">
-            {fullscreenSupported ? <button type="button" className="ft-iconbtn" aria-label="Fullscreen" onClick={onFullscreen}>⛶</button> : null}
-            <button type="button" className="ft-iconbtn" aria-label="Minimize to a small timer" title="Minimize to a small timer" onClick={onMinimize}>🗕</button>
-            <button type="button" className={`ft-iconbtn ${panel === 'tasks' ? 'is-active' : ''}`} aria-label="Tasks" onClick={onTasks}>☰</button>
-            <button type="button" className={`ft-iconbtn ${panel === 'settings' ? 'is-active' : ''}`} aria-label="Settings" onClick={onSettings}>⚙</button>
+            {fullscreenSupported ? <button type="button" className="ft-iconbtn" aria-label="Fullscreen" onClick={onFullscreen}><SvgIcon d={ICON_FULLSCREEN} /></button> : null}
+            <button type="button" className="ft-iconbtn" aria-label="Minimize to a small timer" title="Minimize to a small timer" onClick={onMinimize}><SvgIcon d={ICON_MINIMIZE} /></button>
+            <button type="button" className={`ft-iconbtn ${panel === 'tasks' ? 'is-active' : ''}`} aria-label="Tasks" onClick={onTasks}><SvgIcon d={ICON_TASKS} /></button>
+            <button type="button" className={`ft-iconbtn ${panel === 'settings' ? 'is-active' : ''}`} aria-label="Settings" onClick={onSettings}><SvgIcon d={ICON_SETTINGS} /></button>
         </span>
     </header>;
 });
@@ -486,7 +518,7 @@ const TasksSheet = React.memo(function TasksSheet({ tasksState, setTasksState, w
         setNewTask(''); setNewEst(1);
     };
     return <aside className="ft-sheet" aria-label="Tasks">
-        <div className="ft-sheet-head"><h2>Tasks</h2><button type="button" className="ft-sheet-close" aria-label="Close tasks" onClick={onClose}>✕</button></div>
+        <div className="ft-sheet-head"><h2>Tasks</h2><button type="button" className="ft-sheet-close" aria-label="Close tasks" onClick={onClose}><SvgIcon d={ICON_CLOSE} /></button></div>
         <div className="ft-addtask">
             <input value={newTask} placeholder="What are you studying?" onChange={(e) => setNewTask(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') addTask(); }} maxLength={120} />
             <span className="ft-stepper is-small">
@@ -551,7 +583,7 @@ const SettingsSheet = React.memo(function SettingsSheet({ settings, patch, bgSta
     };
 
     return <aside className="ft-sheet" aria-label="Settings">
-        <div className="ft-sheet-head"><h2>Settings</h2><button type="button" className="ft-sheet-close" aria-label="Close settings" onClick={onClose}>✕</button></div>
+        <div className="ft-sheet-head"><h2>Settings</h2><button type="button" className="ft-sheet-close" aria-label="Close settings" onClick={onClose}><SvgIcon d={ICON_CLOSE} /></button></div>
 
         <section>
             <h3>Appearance</h3>
@@ -1154,4 +1186,4 @@ export function App() {
             </button>
         </div> : null}
     </div>;
-}
+    }
