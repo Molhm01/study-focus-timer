@@ -1171,80 +1171,83 @@ useState("");S.useEffect(()=>{try{const c=window.localStorage.getItem("sft:"+e);
 null&&typeof t=="object"&&!Array.isArray(t)&&v!==null&&typeof v=="object"&&!Array.isArray(v)?{...t,...v}:v;r(y)}}catch{s(
 "Saved data on this browser could not be read.")}i(!0)},[e]);const a=S.useCallback(c=>{r(v=>{const y=typeof c=="function"?
 c(v):c;try{window.localStorage.setItem("sft:"+e,JSON.stringify(y))}catch{s("This browser blocked saving. Changes last un\
-til the tab closes.")}return y})},[e]);return[n,a,{ready:l,message:o}]}const vm={curated:["images/curated-0.txt"],rain:[
-"images/rain-0.txt","images/rain-1.txt"],"thumb-rain":["images/thumb-rain-0.txt"],library:["images/library-0.txt","image\
-s/library-1.txt","images/library-2.txt","images/library-3.txt","images/library-4.txt"],"thumb-library":["images/thumb-li\
-brary-0.txt"],coffee:["images/coffee-0.txt","images/coffee-1.txt","images/coffee-2.txt"],"thumb-coffee":["images/thumb-c\
-offee-0.txt"],desk:["images/desk-0.txt","images/desk-1.txt","images/desk-2.txt"],"thumb-desk":["images/thumb-desk-0.txt"],
-mountains:["images/mountains-0.txt","images/mountains-1.txt","images/mountains-2.txt","images/mountains-3.txt","images/m\
-ountains-4.txt","images/mountains-5.txt"],"thumb-mountains":["images/thumb-mountains-0.txt"],forest:["images/forest-0.tx\
-t","images/forest-1.txt","images/forest-2.txt","images/forest-3.txt"],"thumb-forest":["images/thumb-forest-0.txt"],stars:[
-"images/stars-0.txt"],"thumb-stars":["images/thumb-stars-0.txt"],ocean:["images/ocean-0.txt","images/ocean-1.txt","image\
-s/ocean-2.txt"],"thumb-ocean":["images/thumb-ocean-0.txt"],catalog:["images/catalog-0.txt","images/catalog-1.txt","image\
-s/catalog-2.txt","images/catalog-3.txt","images/catalog-4.txt","images/catalog-5.txt","images/catalog-6.txt"]},Ii={};function _s(e){
-return Ii[e]||(Ii[e]=Promise.all(vm[e].map(async t=>{const n=await fetch(t);if(!n.ok)throw Error("Image unavailable");return n.
-text()})).then(t=>"data:image/jpeg;base64,"+t.join("").replace(/\s/g,"")))}function yd(e){const[t,n]=S.useState("");return S.
-useEffect(()=>{let r=!0;return _s(e).then(l=>{r&&n(l)}).catch(()=>{}),()=>{r=!1}},[e]),t}const gm={rain:"photos/12-rain.\
-jpg",library:"photos/13-library.jpg",coffee:"photos/14-coffee.jpg",desk:"photos/15-desk.jpg",mountains:"photos/28-mounta\
-ins.jpg",forest:"photos/17-forest.jpg",stars:"photos/18-stars.jpg",ocean:"photos/19-ocean.jpg"},km={rain:"thumbs/20-rain\
-.jpg",library:"thumbs/21-library.jpg",coffee:"thumbs/22-coffee.jpg",desk:"thumbs/23-desk.jpg",mountains:"thumbs/24-mount\
-ains.jpg",forest:"thumbs/25-forest.jpg",stars:"thumbs/26-stars.jpg",ocean:"thumbs/27-ocean.jpg"},qa=Object.fromEntries(Object.
-keys(gm).map(e=>[e,()=>_s(e).then(t=>({default:t}))])),eu=Object.fromEntries(Object.keys(km).map(e=>[e,()=>_s("thumb-"+e).
-then(t=>({default:t}))])),Oi={},Di={},Fi={focusMin:25,shortMin:5,longMin:15,longEvery:4,autoBreaks:!1,autoFocus:!1,alarmSound:"\
-bell",alarmVolume:.8,alarmRepeat:!0,customAlarm:null,tick:!1,ambient:"none",ambientVolume:.5,notifications:!1,keepAwake:!1,
-background:{kind:"builtin",id:"rain"},bgAnimate:!0,scrim:.45,accent:"#9fd8c6",font:"sans",clockStyle:"ring",clockSize:"m",
-showDots:!0,showChip:!0,showHint:!0,spotify:null,spotifyOpen:!1},wm=[{id:"rain",name:"Rainy window"},{id:"library",name:"\
-Library"},{id:"coffee",name:"Coffee notes"},{id:"desk",name:"Night desk"},{id:"mountains",name:"Mountains"},{id:"forest",
-name:"Misty forest"},{id:"stars",name:"Night sky"},{id:"ocean",name:"Ocean"}],pl=[{id:"dusk",name:"Dusk",css:"linear-gra\
-dient(160deg, #232453 0%, #6b3f63 55%, #c96f4a 100%)"},{id:"moss",name:"Moss",css:"linear-gradient(160deg, #0f2e25 0%, #\
-1d5c46 60%, #7ea87b 100%)"},{id:"ink",name:"Ink",css:"linear-gradient(160deg, #101418 0%, #1f2a33 100%)"},{id:"dawn",name:"\
-Dawn",css:"linear-gradient(160deg, #3b2f4a 0%, #8a5a6e 55%, #e8a87c 100%)"}],vd=[{id:"aurora",name:"Aurora"},{id:"meteor",
-name:"Falling stars"},{id:"waves",name:"Night waves"},{id:"rainfall",name:"Rain streaks"}],gd=[{id:"shrine",name:"Moonli\
-t shrine",url:"https://cdn.pixabay.com/video/2026/04/22/348164_large.mp4",tile:0,preview:"curated"},{id:"rainy-window",name:"\
-Rainy window",url:"https://cdn.pixabay.com/video/2026/09/15/376433_medium.mp4",tile:1,preview:"curated"},{id:"misty-rive\
-r",name:"Misty river",url:"https://cdn.pixabay.com/video/2026/04/05/344726_medium.mp4",tile:2,preview:"curated"},{id:"wa\
-ter-garden",name:"Water garden",url:"https://cdn.pixabay.com/video/2025/07/12/290959_medium.mp4",tile:3,preview:"curated"},
-{id:"sakura-night",name:"Island moon",url:"https://cdn.pixabay.com/video/2023/03/22/155672-810706799_large.mp4",tile:4,preview:"\
-curated"},{id:"night-train",name:"Night train",url:"https://cdn.pixabay.com/video/2025/10/23/311602_medium.mp4",tile:5,preview:"\
-curated"},{id:"japan-street",name:"Sakura street",url:"https://cdn.pixabay.com/video/2025/04/07/270367_medium.mp4",tile:6,
-preview:"curated"},{id:"cozy-window",name:"Rainy desk",url:"https://cdn.pixabay.com/video/2026/09/13/376049_large.mp4",tile:7,
-preview:"curated"},{id:"balcony-dusk",name:"Evening balcony",url:"https://cdn.pixabay.com/video/2026/09/15/376434_medium\
-.mp4",tile:8,preview:"curated"}],Lo=[{id:"anime-lofi-rain-363709",name:"Rainy bus stop",url:"https://cdn.pixabay.com/vid\
-eo/2026/07/13/363709_medium.mp4",tile:0},{id:"anime-lofi-record-363710",name:"Record shop",url:"https://cdn.pixabay.com/\
-video/2026/07/13/363710_medium.mp4",tile:1},{id:"aurora-borealis-northern-186969-879222062",name:"Aurora lake",url:"http\
-s://cdn.pixabay.com/video/2023/10/29/186969-879222062_medium.mp4",tile:2},{id:"autumn-forest-trees-313784",name:"Autumn \
-nook",url:"https://cdn.pixabay.com/video/2025/11/04/313784_medium.mp4",tile:3},{id:"autumn-forest-trees-313787",name:"Au\
-tumn nook",url:"https://cdn.pixabay.com/video/2025/11/04/313787_medium.mp4",tile:4},{id:"autumn-nature-cabin-324160",name:"\
-Cabin bedroom",url:"https://cdn.pixabay.com/video/2025/12/24/324160_medium.mp4",tile:5},{id:"autumn-nature-cabin-324164",
-name:"Cabin bedroom",url:"https://cdn.pixabay.com/video/2025/12/24/324164_medium.mp4",tile:6},{id:"autumn-relaxation-for\
-est-309119",name:"Autumn lake",url:"https://cdn.pixabay.com/video/2025/10/10/309119_medium.mp4",tile:7},{id:"beach-ocean\
--night-384362",name:"Stormy coast",url:"https://cdn.pixabay.com/video/2026/10/22/384362_medium.mp4",tile:8},{id:"biolumi\
-nescence-beach-waves-343671",name:"Starlit shore",url:"https://cdn.pixabay.com/video/2026/03/31/343671_medium.mp4",tile:9},
-{id:"bioluminescence-beach-waves-346010",name:"Midnight waves",url:"https://cdn.pixabay.com/video/2026/04/12/346010_medi\
-um.mp4",tile:10},{id:"bioluminescence-bioluminescent-ocean-381552",name:"Glowing ocean",url:"https://cdn.pixabay.com/vid\
-eo/2026/10/08/381552_medium.mp4",tile:11},{id:"bioluminescent-beach-375118-375118",name:"Aurora coast",url:"https://cdn.\
-pixabay.com/video/2026/09/08/375118_medium.mp4",tile:12},{id:"boats-moon-moonlight-381338",name:"Moonlit boats",url:"htt\
-ps://cdn.pixabay.com/video/2026/10/07/381338_medium.mp4",tile:13},{id:"bonfire-flames-fire-201688-916116512",name:"Bonfi\
-re",url:"https://cdn.pixabay.com/video/2024/02/23/201688-916116512_medium.mp4",tile:14},{id:"book-candle-stars-184469-87\
-3483892",name:"Candlelit book",url:"https://cdn.pixabay.com/video/2023/10/10/184469-873483892_medium.mp4",tile:15},{id:"\
-book-study-books-347655",name:"Library fire",url:"https://cdn.pixabay.com/video/2026/04/19/347655_medium.mp4",tile:16},{
-id:"campfire-bonfire-flames-225422",name:"Campfire embers",url:"https://cdn.pixabay.com/video/2024/08/08/225422_medium.m\
-p4",tile:17},{id:"candle-flame-advent-311235",name:"Rainy candle",url:"https://cdn.pixabay.com/video/2025/10/21/311235_m\
-edium.mp4",tile:18},{id:"candle-flame-advent-312390",name:"Rainy candle",url:"https://cdn.pixabay.com/video/2025/10/28/3\
-12390_medium.mp4",tile:19},{id:"candle-flame-candlelight-312404",name:"Snowy window",url:"https://cdn.pixabay.com/video/\
-2025/10/28/312404_medium.mp4",tile:20},{id:"cedar-tree-line-211013",name:"Cedar trail",url:"https://cdn.pixabay.com/vide\
-o/2024/05/07/211013_medium.mp4",tile:21},{id:"city-starry-sky-310146",name:"Purple night",url:"https://cdn.pixabay.com/v\
-ideo/2025/10/15/310146_medium.mp4",tile:22},{id:"coffee-cup-rest-309872",name:"Rainy coffee",url:"https://cdn.pixabay.co\
-m/video/2025/10/14/309872_medium.mp4",tile:23},{id:"coffee-living-room-237103",name:"Fireside coffee",url:"https://cdn.p\
-ixabay.com/video/2024/10/19/237103_medium.mp4",tile:24},{id:"coffee-tea-steam-285759",name:"Morning steam",url:"https://\
-cdn.pixabay.com/video/2025/06/13/285759_medium.mp4",tile:25},{id:"cottage-cabin-house-180939-865223880",name:"Garden cot\
-tage",url:"https://cdn.pixabay.com/video/2023/09/16/180939-865223880_medium.mp4",tile:26},{id:"couch-sofa-rain-185888-87\
-6579680",name:"Forest lounge",url:"https://cdn.pixabay.com/video/2023/10/20/185888-876579680_medium.mp4",tile:27},{id:"c\
-ozy-bedroom-289797-289797",name:"Cozy bedroom",url:"https://cdn.pixabay.com/video/2025/07/06/289797_medium.mp4",tile:28},
-{id:"cozy-bedroom-modern-290857",name:"Rainy bedroom",url:"https://cdn.pixabay.com/video/2025/07/12/290857_medium.mp4",tile:29},
-{id:"cozy-bedroom-modern-290943",name:"Rainy bedroom",url:"https://cdn.pixabay.com/video/2025/07/12/290943_medium.mp4",tile:30},
-{id:"cozy-bedroom-modern-290944",name:"Rainy bedroom",url:"https://cdn.pixabay.com/video/2025/07/12/290944_medium.mp4",tile:31},
-{id:"cozy-winter-autumn-253056",name:"Winter fire",url:"https://cdn.pixabay.com/video/2025/01/17/253056_medium.mp4",tile:32},
+til the tab closes.")}return y})},[e]);return[n,a,{ready:l,message:o}]}const vm={curated:["images/images/curated-0.txt"],
+rain:["images/images/rain-0.txt","images/images/rain-1.txt"],"thumb-rain":["images/images/thumb-rain-0.txt"],library:["i\
+mages/images/library-0.txt","images/images/library-1.txt","images/images/library-2.txt","images/images/library-3.txt","i\
+mages/images/library-4.txt"],"thumb-library":["images/images/thumb-library-0.txt"],coffee:["images/images/coffee-0.txt",
+"images/images/coffee-1.txt","images/images/coffee-2.txt"],"thumb-coffee":["images/images/thumb-coffee-0.txt"],desk:["im\
+ages/images/desk-0.txt","images/images/desk-1.txt","images/images/desk-2.txt"],"thumb-desk":["images/images/thumb-desk-0\
+.txt"],mountains:["images/images/mountains-0.txt","images/images/mountains-1.txt","images/images/mountains-2.txt","image\
+s/images/mountains-3.txt","images/images/mountains-4.txt","images/images/mountains-5.txt"],"thumb-mountains":["images/im\
+ages/thumb-mountains-0.txt"],forest:["images/images/forest-0.txt","images/images/forest-1.txt","images/images/forest-2.t\
+xt","images/images/forest-3.txt"],"thumb-forest":["images/images/thumb-forest-0.txt"],stars:["images/images/stars-0.txt"],
+"thumb-stars":["images/images/thumb-stars-0.txt"],ocean:["images/images/ocean-0.txt","images/images/ocean-1.txt","images\
+/images/ocean-2.txt"],"thumb-ocean":["images/images/thumb-ocean-0.txt"],catalog:["images/images/catalog-0.txt","images/i\
+mages/catalog-1.txt","images/images/catalog-2.txt","images/images/catalog-3.txt","images/images/catalog-4.txt","images/i\
+mages/catalog-5.txt","images/images/catalog-6.txt"]},Ii={};function _s(e){return Ii[e]||(Ii[e]=Promise.all(vm[e].map(async t=>{
+const n=await fetch(t);if(!n.ok)throw Error("Image unavailable");return n.text()})).then(t=>"data:image/jpeg;base64,"+t.
+join("").replace(/\s/g,"")))}function yd(e){const[t,n]=S.useState("");return S.useEffect(()=>{let r=!0;return _s(e).then(
+l=>{r&&n(l)}).catch(()=>{}),()=>{r=!1}},[e]),t}const gm={rain:"photos/12-rain.jpg",library:"photos/13-library.jpg",coffee:"\
+photos/14-coffee.jpg",desk:"photos/15-desk.jpg",mountains:"photos/28-mountains.jpg",forest:"photos/17-forest.jpg",stars:"\
+photos/18-stars.jpg",ocean:"photos/19-ocean.jpg"},km={rain:"thumbs/20-rain.jpg",library:"thumbs/21-library.jpg",coffee:"\
+thumbs/22-coffee.jpg",desk:"thumbs/23-desk.jpg",mountains:"thumbs/24-mountains.jpg",forest:"thumbs/25-forest.jpg",stars:"\
+thumbs/26-stars.jpg",ocean:"thumbs/27-ocean.jpg"},qa=Object.fromEntries(Object.keys(gm).map(e=>[e,()=>_s(e).then(t=>({default:t}))])),
+eu=Object.fromEntries(Object.keys(km).map(e=>[e,()=>_s("thumb-"+e).then(t=>({default:t}))])),Oi={},Di={},Fi={focusMin:25,
+shortMin:5,longMin:15,longEvery:4,autoBreaks:!1,autoFocus:!1,alarmSound:"bell",alarmVolume:.8,alarmRepeat:!0,customAlarm:null,
+tick:!1,ambient:"none",ambientVolume:.5,notifications:!1,keepAwake:!1,background:{kind:"builtin",id:"rain"},bgAnimate:!0,
+scrim:.45,accent:"#9fd8c6",font:"sans",clockStyle:"ring",clockSize:"m",showDots:!0,showChip:!0,showHint:!0,spotify:null,
+spotifyOpen:!1},wm=[{id:"rain",name:"Rainy window"},{id:"library",name:"Library"},{id:"coffee",name:"Coffee notes"},{id:"\
+desk",name:"Night desk"},{id:"mountains",name:"Mountains"},{id:"forest",name:"Misty forest"},{id:"stars",name:"Night sky"},
+{id:"ocean",name:"Ocean"}],pl=[{id:"dusk",name:"Dusk",css:"linear-gradient(160deg, #232453 0%, #6b3f63 55%, #c96f4a 100%\
+)"},{id:"moss",name:"Moss",css:"linear-gradient(160deg, #0f2e25 0%, #1d5c46 60%, #7ea87b 100%)"},{id:"ink",name:"Ink",css:"\
+linear-gradient(160deg, #101418 0%, #1f2a33 100%)"},{id:"dawn",name:"Dawn",css:"linear-gradient(160deg, #3b2f4a 0%, #8a5\
+a6e 55%, #e8a87c 100%)"}],vd=[{id:"aurora",name:"Aurora"},{id:"meteor",name:"Falling stars"},{id:"waves",name:"Night wav\
+es"},{id:"rainfall",name:"Rain streaks"}],gd=[{id:"shrine",name:"Moonlit shrine",url:"https://cdn.pixabay.com/video/2026\
+/04/22/348164_large.mp4",tile:0,preview:"curated"},{id:"rainy-window",name:"Rainy window",url:"https://cdn.pixabay.com/v\
+ideo/2026/09/15/376433_medium.mp4",tile:1,preview:"curated"},{id:"misty-river",name:"Misty river",url:"https://cdn.pixab\
+ay.com/video/2026/04/05/344726_medium.mp4",tile:2,preview:"curated"},{id:"water-garden",name:"Water garden",url:"https:/\
+/cdn.pixabay.com/video/2025/07/12/290959_medium.mp4",tile:3,preview:"curated"},{id:"sakura-night",name:"Island moon",url:"\
+https://cdn.pixabay.com/video/2023/03/22/155672-810706799_large.mp4",tile:4,preview:"curated"},{id:"night-train",name:"N\
+ight train",url:"https://cdn.pixabay.com/video/2025/10/23/311602_medium.mp4",tile:5,preview:"curated"},{id:"japan-street",
+name:"Sakura street",url:"https://cdn.pixabay.com/video/2025/04/07/270367_medium.mp4",tile:6,preview:"curated"},{id:"coz\
+y-window",name:"Rainy desk",url:"https://cdn.pixabay.com/video/2026/09/13/376049_large.mp4",tile:7,preview:"curated"},{id:"\
+balcony-dusk",name:"Evening balcony",url:"https://cdn.pixabay.com/video/2026/09/15/376434_medium.mp4",tile:8,preview:"cu\
+rated"}],Lo=[{id:"anime-lofi-rain-363709",name:"Rainy bus stop",url:"https://cdn.pixabay.com/video/2026/07/13/363709_med\
+ium.mp4",tile:0},{id:"anime-lofi-record-363710",name:"Record shop",url:"https://cdn.pixabay.com/video/2026/07/13/363710_\
+medium.mp4",tile:1},{id:"aurora-borealis-northern-186969-879222062",name:"Aurora lake",url:"https://cdn.pixabay.com/vide\
+o/2023/10/29/186969-879222062_medium.mp4",tile:2},{id:"autumn-forest-trees-313784",name:"Autumn nook",url:"https://cdn.p\
+ixabay.com/video/2025/11/04/313784_medium.mp4",tile:3},{id:"autumn-forest-trees-313787",name:"Autumn nook",url:"https://\
+cdn.pixabay.com/video/2025/11/04/313787_medium.mp4",tile:4},{id:"autumn-nature-cabin-324160",name:"Cabin bedroom",url:"h\
+ttps://cdn.pixabay.com/video/2025/12/24/324160_medium.mp4",tile:5},{id:"autumn-nature-cabin-324164",name:"Cabin bedroom",
+url:"https://cdn.pixabay.com/video/2025/12/24/324164_medium.mp4",tile:6},{id:"autumn-relaxation-forest-309119",name:"Aut\
+umn lake",url:"https://cdn.pixabay.com/video/2025/10/10/309119_medium.mp4",tile:7},{id:"beach-ocean-night-384362",name:"\
+Stormy coast",url:"https://cdn.pixabay.com/video/2026/10/22/384362_medium.mp4",tile:8},{id:"bioluminescence-beach-waves-\
+343671",name:"Starlit shore",url:"https://cdn.pixabay.com/video/2026/03/31/343671_medium.mp4",tile:9},{id:"bioluminescen\
+ce-beach-waves-346010",name:"Midnight waves",url:"https://cdn.pixabay.com/video/2026/04/12/346010_medium.mp4",tile:10},{
+id:"bioluminescence-bioluminescent-ocean-381552",name:"Glowing ocean",url:"https://cdn.pixabay.com/video/2026/10/08/3815\
+52_medium.mp4",tile:11},{id:"bioluminescent-beach-375118-375118",name:"Aurora coast",url:"https://cdn.pixabay.com/video/\
+2026/09/08/375118_medium.mp4",tile:12},{id:"boats-moon-moonlight-381338",name:"Moonlit boats",url:"https://cdn.pixabay.c\
+om/video/2026/10/07/381338_medium.mp4",tile:13},{id:"bonfire-flames-fire-201688-916116512",name:"Bonfire",url:"https://c\
+dn.pixabay.com/video/2024/02/23/201688-916116512_medium.mp4",tile:14},{id:"book-candle-stars-184469-873483892",name:"Can\
+dlelit book",url:"https://cdn.pixabay.com/video/2023/10/10/184469-873483892_medium.mp4",tile:15},{id:"book-study-books-3\
+47655",name:"Library fire",url:"https://cdn.pixabay.com/video/2026/04/19/347655_medium.mp4",tile:16},{id:"campfire-bonfi\
+re-flames-225422",name:"Campfire embers",url:"https://cdn.pixabay.com/video/2024/08/08/225422_medium.mp4",tile:17},{id:"\
+candle-flame-advent-311235",name:"Rainy candle",url:"https://cdn.pixabay.com/video/2025/10/21/311235_medium.mp4",tile:18},
+{id:"candle-flame-advent-312390",name:"Rainy candle",url:"https://cdn.pixabay.com/video/2025/10/28/312390_medium.mp4",tile:19},
+{id:"candle-flame-candlelight-312404",name:"Snowy window",url:"https://cdn.pixabay.com/video/2025/10/28/312404_medium.mp\
+4",tile:20},{id:"cedar-tree-line-211013",name:"Cedar trail",url:"https://cdn.pixabay.com/video/2024/05/07/211013_medium.\
+mp4",tile:21},{id:"city-starry-sky-310146",name:"Purple night",url:"https://cdn.pixabay.com/video/2025/10/15/310146_medi\
+um.mp4",tile:22},{id:"coffee-cup-rest-309872",name:"Rainy coffee",url:"https://cdn.pixabay.com/video/2025/10/14/309872_m\
+edium.mp4",tile:23},{id:"coffee-living-room-237103",name:"Fireside coffee",url:"https://cdn.pixabay.com/video/2024/10/19\
+/237103_medium.mp4",tile:24},{id:"coffee-tea-steam-285759",name:"Morning steam",url:"https://cdn.pixabay.com/video/2025/\
+06/13/285759_medium.mp4",tile:25},{id:"cottage-cabin-house-180939-865223880",name:"Garden cottage",url:"https://cdn.pixa\
+bay.com/video/2023/09/16/180939-865223880_medium.mp4",tile:26},{id:"couch-sofa-rain-185888-876579680",name:"Forest loung\
+e",url:"https://cdn.pixabay.com/video/2023/10/20/185888-876579680_medium.mp4",tile:27},{id:"cozy-bedroom-289797-289797",
+name:"Cozy bedroom",url:"https://cdn.pixabay.com/video/2025/07/06/289797_medium.mp4",tile:28},{id:"cozy-bedroom-modern-2\
+90857",name:"Rainy bedroom",url:"https://cdn.pixabay.com/video/2025/07/12/290857_medium.mp4",tile:29},{id:"cozy-bedroom-\
+modern-290943",name:"Rainy bedroom",url:"https://cdn.pixabay.com/video/2025/07/12/290943_medium.mp4",tile:30},{id:"cozy-\
+bedroom-modern-290944",name:"Rainy bedroom",url:"https://cdn.pixabay.com/video/2025/07/12/290944_medium.mp4",tile:31},{id:"\
+cozy-winter-autumn-253056",name:"Winter fire",url:"https://cdn.pixabay.com/video/2025/01/17/253056_medium.mp4",tile:32},
 {id:"creek-snow-winter-190915-888878158",name:"Snowy creek",url:"https://cdn.pixabay.com/video/2023/11/27/190915-8888781\
 58_medium.mp4",tile:33},{id:"dark-ocean-ocean-372868",name:"Ocean doorway",url:"https://cdn.pixabay.com/video/2026/08/27\
 /372868_medium.mp4",tile:34},{id:"dark-ocean-ocean-372869",name:"Ocean doorway",url:"https://cdn.pixabay.com/video/2026/\
