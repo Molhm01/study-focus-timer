@@ -165,7 +165,7 @@ const SCENE_FILES: Record<string, string> = {
     'sakura-night-p.jpg': '44-sakura-night-p.jpg',
     'sakura-night-p.mp4': '25-sakura-night-p.mp4',
     'shrine-l.jpg': '10-shrine-l.jpg',
-    'shrine-l.mp4': '19-shrine-l.mp4',
+    'shrine-l.mp4': '1-shrine-l.mp4',
     'shrine-p.jpg': '36-shrine-p.jpg',
     'shrine-p.mp4': '18-shrine-p.mp4',
     'water-garden-l.jpg': '43-water-garden-l.jpg',
@@ -1186,4 +1186,4 @@ export function App() {
             </button>
         </div> : null}
     </div>;
-    }
+                            }
