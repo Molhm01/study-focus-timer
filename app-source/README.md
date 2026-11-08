@@ -69,3 +69,24 @@ under 250 KB). GitHub Pages then republishes automatically from `main` /
 - Pinterest import works for public pins/boards only.
 - Fullscreen uses the browser Fullscreen API; iOS Safari does not support it
   for web pages, so the button is hidden there.
+
+## Animated video scenes
+
+`src/scenes/<id>.mp4` (+ matching `.jpg` poster) are short muted loop clips shown as
+animated backgrounds. They build into lazy `scene-*.js` chunks that load only when
+a visitor picks that scene, and pause when the tab is hidden or the timer is
+minimized. With reduced-motion on, only the poster image shows.
+
+Sources (all Pixabay, free to use under the Pixabay Content License
+https://pixabay.com/service/license-summary/ - commercial and noncommercial use
+allowed, modification allowed, no attribution required):
+
+- shrine.mp4 - "Anime Style, Fantasy, Japanese Shrine" https://pixabay.com/videos/anime-style-fantasy-japanese-shrine-348164/
+- rainy-window.mp4 - "Anime, Lofi, Rain" https://pixabay.com/videos/anime-lofi-rain-anime-girl-376433/
+- misty-river.mp4 - "River, Mist, Water" https://pixabay.com/videos/river-mist-water-nature-loop-344726/
+- water-garden.mp4 - "Gardens, Loop, Waterfall" https://pixabay.com/videos/gardens-loop-waterfall-meditation-290959/
+
+Re-encoded for the web with ffmpeg (720px wide, H.264 yuv420p, no audio,
+faststart, ~CRF 30, max 10s). To add a scene: drop `<id>.mp4` and a small
+`<id>.jpg` poster in `src/scenes/`, add it to `SCENES`, `SCENE_VIDEO_LOADERS`
+and `SCENE_POSTER_LOADERS` in `src/App.tsx`, then rebuild.
