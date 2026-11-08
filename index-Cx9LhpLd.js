@@ -1417,52 +1417,52 @@ u.jsx("span",{className:"ft-field-label",children:e}),t?u.jsx("span",{className:
 animate:r}){const l=S.useRef(null),[i,o]=S.useState(!1),s=yd("rain"),a=S.useRef({paused:n,animate:r});a.current={paused:n,
 animate:r};const[c,v]=S.useState(()=>window.matchMedia("(orientation: portrait)").matches);S.useEffect(()=>{const k=window.
 matchMedia("(orientation: portrait)"),g=()=>v(k.matches);return k.addEventListener("change",g),()=>k.removeEventListener(
-"change",g)},[]);const y=c?"p":"l",m=t.url||kd(t.id,y,"mp4");return S.useEffect(()=>{o(!1);const k=Array.from(l.current.
-querySelectorAll("video"));let g=0,w=!1,I=!1,f=0,d=!1;const p=j=>j.play().catch(()=>{}),x=()=>{a.current.paused||!a.current.
-animate||document.hidden?k.forEach(j=>j.pause()):(p(k[g]),w&&p(k[1-g]))},_=()=>{if(I)return;const j=k[g],M=k[1-g];if(!d&&
-j.readyState>=2&&(d=!0,x()),!(!a.current.paused&&a.current.animate&&!document.hidden))k.forEach(A=>{A.paused||A.pause()});else if(d){
-j.paused&&!j.ended&&p(j);const A=Math.min(1.5,j.duration/4);if(!w&&Number.isFinite(j.duration)&&j.currentTime>=j.duration-
-A&&M.readyState>=2&&(w=!0,M.currentTime=0,p(M)),w){M.paused&&p(M);const T=Math.min(1,M.currentTime/A);j.style.opacity=String(
-1-T),M.style.opacity="1",T>=1&&(j.pause(),j.currentTime=0,j.style.zIndex="0",j.style.opacity="1",M.style.zIndex="1",g=1-
-g,w=!1,l.current.dataset.wraps=String(Number(l.current.dataset.wraps||0)+1))}}f=requestAnimationFrame(_)};return k[0].style.
-zIndex="1",k[1].style.zIndex="0",f=requestAnimationFrame(_),document.addEventListener("visibilitychange",x),window.addEventListener(
-"pointerdown",x),()=>{I=!0,cancelAnimationFrame(f),k.forEach(j=>j.pause()),document.removeEventListener("visibilitychang\
-e",x),window.removeEventListener("pointerdown",x)}},[m]),u.jsxs("div",{ref:l,className:"ft-scene-stage",style:{backgroundImage:s?
-`url(${s})`:void 0,backgroundSize:"cover",backgroundPosition:"center"},children:[i&&u.jsx("span",{className:"ft-stream-s\
-tatus",children:"This scene couldn't load. Choose another background in Settings."}),[0,1].map(k=>u.jsx("video",{onError:()=>o(
-!0),className:"ft-bg ft-bgvideo",src:m,muted:!0,playsInline:!0,disablePictureInPicture:!0,disableRemotePlayback:!0,preload:"\
-auto","aria-hidden":"true"},k))]},m)}),$m=It.memo(function({kind:t,id:n,scrim:r,builtinSrc:l,linkBg:i,uploadBg:o,paused:s,
-animate:a}){let c={};t==="builtin"&&l?c={backgroundImage:`url(${l})`}:t==="gradient"?c={backgroundImage:(pl.find(k=>k.id===
-n)||pl[0]).css}:t==="link"&&(i==null?void 0:i.kind)==="image"?c={backgroundImage:`url(${i.url})`}:t==="upload"&&(o==null?
-void 0:o.kind)==="image"?c={backgroundImage:`url(${o.url})`}:(t==="link"||t==="upload"||t==="builtin")&&(c={backgroundImage:pl[0].
-css});const v=vd.some(k=>k.id===n)?n:"aurora",y=t==="scene"?[...gd,...Lo].find(k=>k.id===n):void 0,m=t==="link"&&(i==null?
-void 0:i.kind)==="video"?i.url:t==="upload"&&(o==null?void 0:o.kind)==="video"?o.url:null;return u.jsxs(u.Fragment,{children:[
-y?u.jsx(Am,{scene:y,paused:!!s,animate:a}):m?u.jsx(Um,{src:m,paused:!!s,animate:a}):t==="animated"?u.jsxs("div",{className:`\
-ft-anim ft-anim-${v}`,"aria-hidden":"true",children:[u.jsx("i",{}),u.jsx("i",{}),u.jsx("i",{})]}):u.jsx("div",{className:"\
-ft-bg",style:c}),u.jsx("div",{className:"ft-scrim",style:{opacity:r}})]})}),Um=It.memo(function({src:t,paused:n,animate:r}){
-const l=S.useRef(null);return S.useEffect(()=>{const i=l.current;if(!i)return;const o=()=>{n||!r||document.hidden?i.pause():
-i.play().catch(()=>{})};o();const s=()=>{!n&&r&&!document.hidden&&i.play().catch(()=>{})};return document.addEventListener(
-"visibilitychange",o),window.addEventListener("pointerdown",s),()=>{document.removeEventListener("visibilitychange",o),window.
-removeEventListener("pointerdown",s)}},[n,r,t]),r?u.jsx("video",{ref:l,className:"ft-bg ft-bgvideo",src:t,muted:!0,loop:!0,
-autoPlay:!0,playsInline:!0,preload:"auto","aria-hidden":"true"}):null}),tu=It.memo(function({scene:t,active:n,onPick:r}){
-const l=yd(t.preview||"catalog"),i=t.preview?3:8,o=t.preview?3:13;return u.jsxs("button",{type:"button",className:`ft-bg\
-swatch ft-bgswatch-named ${n?"is-active":""}`,"aria-label":`${t.name} animated scene`,onClick:r,children:[t.tile!=null?u.
-jsx("span",{className:"ft-bgswatch-img",style:{backgroundImage:l?`url(${l})`:void 0,backgroundSize:`${i*100}% ${o*100}%`,
-backgroundPosition:`${t.tile%i*100/(i-1)}% ${Math.floor(t.tile/i)*100/(o-1)}%`}}):u.jsx("img",{className:"ft-bgswatch-im\
-g",src:Sm(t,"p"),alt:"",loading:"lazy",decoding:"async"}),u.jsx("span",{className:"ft-bgswatch-name",children:t.name})]})}),
-bm=It.memo(function({id:t,name:n,active:r,onPick:l}){const[i,o]=S.useState(Di[t]||null);return S.useEffect(()=>{let s=!0;
-return!Di[t]&&eu[t]&&eu[t]().then(a=>{Di[t]=a.default,s&&o(a.default)}).catch(()=>{}),()=>{s=!1}},[t]),u.jsx("button",{type:"\
-button",className:`ft-bgswatch ${r?"is-active":""}`,style:i?{backgroundImage:`url(${i})`}:void 0,"aria-label":n,onClick:l})}),
-Vm=It.memo(function({chip:t,panel:n,fullscreenSupported:r,onFullscreen:l,onTasks:i,onSettings:o,onMinimize:s,onPopout:a}){
-return u.jsxs("header",{className:"ft-topbar",children:[u.jsx("span",{className:"ft-brand",children:"Study focus"}),t?u.
-jsx("span",{className:"ft-chip",title:"Today's completed focus time",children:t}):null,u.jsxs("span",{className:"ft-topb\
-ar-actions",children:[r?u.jsx("button",{type:"button",className:"ft-iconbtn","aria-label":"Fullscreen",onClick:l,children:u.
-jsx(bt,{d:zm})}):null,u.jsx("button",{type:"button",className:"ft-iconbtn","aria-label":"Open timer in its own window",title:"\
-Open timer in its own window",onClick:a,children:u.jsx(bt,{d:Fm})}),u.jsx("button",{type:"button",className:"ft-iconbtn",
-"aria-label":"Minimize to a small timer",title:"Minimize to a small timer",onClick:s,children:u.jsx(bt,{d:Im})}),u.jsx("\
-button",{type:"button",className:`ft-iconbtn ${n==="tasks"?"is-active":""}`,"aria-label":"Tasks",onClick:i,children:u.jsx(
-bt,{d:Om})}),u.jsx("button",{type:"button",className:`ft-iconbtn ${n==="settings"?"is-active":""}`,"aria-label":"Setting\
-s",onClick:o,children:u.jsx(bt,{d:Dm})})]})]})}),Bm=It.memo(function({tasksState:t,setTasksState:n,week:r,ready:l,savedMessage:i,
+"change",g)},[]);const y=c?"p":"l",m=t.url?c?t.url:t.url.replace("_medium.mp4","_large.mp4"):kd(t.id,y,"mp4");return S.useEffect(
+()=>{o(!1);const k=Array.from(l.current.querySelectorAll("video"));let g=0,w=!1,I=!1,f=0,d=!1;const p=j=>j.play().catch(
+()=>{}),x=()=>{a.current.paused||!a.current.animate||document.hidden?k.forEach(j=>j.pause()):(p(k[g]),w&&p(k[1-g]))},_=()=>{
+if(I)return;const j=k[g],M=k[1-g];if(!d&&j.readyState>=2&&(d=!0,x()),!(!a.current.paused&&a.current.animate&&!document.hidden))
+k.forEach(A=>{A.paused||A.pause()});else if(d){j.paused&&!j.ended&&p(j);const A=Math.min(1.5,j.duration/4);if(!w&&Number.
+isFinite(j.duration)&&j.currentTime>=j.duration-A&&M.readyState>=2&&(w=!0,M.currentTime=0,p(M)),w){M.paused&&p(M);const T=Math.
+min(1,M.currentTime/A);j.style.opacity=String(1-T),M.style.opacity="1",T>=1&&(j.pause(),j.currentTime=0,j.style.zIndex="\
+0",j.style.opacity="1",M.style.zIndex="1",g=1-g,w=!1,l.current.dataset.wraps=String(Number(l.current.dataset.wraps||0)+1))}}
+f=requestAnimationFrame(_)};return k[0].style.zIndex="1",k[1].style.zIndex="0",f=requestAnimationFrame(_),document.addEventListener(
+"visibilitychange",x),window.addEventListener("pointerdown",x),()=>{I=!0,cancelAnimationFrame(f),k.forEach(j=>j.pause()),
+document.removeEventListener("visibilitychange",x),window.removeEventListener("pointerdown",x)}},[m]),u.jsxs("div",{ref:l,
+className:"ft-scene-stage",style:{backgroundImage:s?`url(${s})`:void 0,backgroundSize:"cover",backgroundPosition:"center"},
+children:[i&&u.jsx("span",{className:"ft-stream-status",children:"This scene couldn't load. Choose another background in\
+ Settings."}),[0,1].map(k=>u.jsx("video",{onError:()=>o(!0),className:"ft-bg ft-bgvideo",src:m,muted:!0,playsInline:!0,disablePictureInPicture:!0,
+disableRemotePlayback:!0,preload:"auto","aria-hidden":"true"},k))]},m)}),$m=It.memo(function({kind:t,id:n,scrim:r,builtinSrc:l,
+linkBg:i,uploadBg:o,paused:s,animate:a}){let c={};t==="builtin"&&l?c={backgroundImage:`url(${l})`}:t==="gradient"?c={backgroundImage:(pl.
+find(k=>k.id===n)||pl[0]).css}:t==="link"&&(i==null?void 0:i.kind)==="image"?c={backgroundImage:`url(${i.url})`}:t==="up\
+load"&&(o==null?void 0:o.kind)==="image"?c={backgroundImage:`url(${o.url})`}:(t==="link"||t==="upload"||t==="builtin")&&
+(c={backgroundImage:pl[0].css});const v=vd.some(k=>k.id===n)?n:"aurora",y=t==="scene"?[...gd,...Lo].find(k=>k.id===n):void 0,
+m=t==="link"&&(i==null?void 0:i.kind)==="video"?i.url:t==="upload"&&(o==null?void 0:o.kind)==="video"?o.url:null;return u.
+jsxs(u.Fragment,{children:[y?u.jsx(Am,{scene:y,paused:!!s,animate:a}):m?u.jsx(Um,{src:m,paused:!!s,animate:a}):t==="anim\
+ated"?u.jsxs("div",{className:`ft-anim ft-anim-${v}`,"aria-hidden":"true",children:[u.jsx("i",{}),u.jsx("i",{}),u.jsx("i",
+{})]}):u.jsx("div",{className:"ft-bg",style:c}),u.jsx("div",{className:"ft-scrim",style:{opacity:r}})]})}),Um=It.memo(function({
+src:t,paused:n,animate:r}){const l=S.useRef(null);return S.useEffect(()=>{const i=l.current;if(!i)return;const o=()=>{n||
+!r||document.hidden?i.pause():i.play().catch(()=>{})};o();const s=()=>{!n&&r&&!document.hidden&&i.play().catch(()=>{})};
+return document.addEventListener("visibilitychange",o),window.addEventListener("pointerdown",s),()=>{document.removeEventListener(
+"visibilitychange",o),window.removeEventListener("pointerdown",s)}},[n,r,t]),r?u.jsx("video",{ref:l,className:"ft-bg ft-\
+bgvideo",src:t,muted:!0,loop:!0,autoPlay:!0,playsInline:!0,preload:"auto","aria-hidden":"true"}):null}),tu=It.memo(function({
+scene:t,active:n,onPick:r}){const l=yd(t.preview||"catalog"),i=t.preview?3:8,o=t.preview?3:13;return u.jsxs("button",{type:"\
+button",className:`ft-bgswatch ft-bgswatch-named ${n?"is-active":""}`,"aria-label":`${t.name} animated scene`,onClick:r,
+children:[t.tile!=null?u.jsx("span",{className:"ft-bgswatch-img",style:{backgroundImage:l?`url(${l})`:void 0,backgroundSize:`${i*
+100}% ${o*100}%`,backgroundPosition:`${t.tile%i*100/(i-1)}% ${Math.floor(t.tile/i)*100/(o-1)}%`}}):u.jsx("img",{className:"\
+ft-bgswatch-img",src:Sm(t,"p"),alt:"",loading:"lazy",decoding:"async"}),u.jsx("span",{className:"ft-bgswatch-name",children:t.
+name})]})}),bm=It.memo(function({id:t,name:n,active:r,onPick:l}){const[i,o]=S.useState(Di[t]||null);return S.useEffect(()=>{
+let s=!0;return!Di[t]&&eu[t]&&eu[t]().then(a=>{Di[t]=a.default,s&&o(a.default)}).catch(()=>{}),()=>{s=!1}},[t]),u.jsx("b\
+utton",{type:"button",className:`ft-bgswatch ${r?"is-active":""}`,style:i?{backgroundImage:`url(${i})`}:void 0,"aria-lab\
+el":n,onClick:l})}),Vm=It.memo(function({chip:t,panel:n,fullscreenSupported:r,onFullscreen:l,onTasks:i,onSettings:o,onMinimize:s,
+onPopout:a}){return u.jsxs("header",{className:"ft-topbar",children:[u.jsx("span",{className:"ft-brand",children:"Study \
+focus"}),t?u.jsx("span",{className:"ft-chip",title:"Today's completed focus time",children:t}):null,u.jsxs("span",{className:"\
+ft-topbar-actions",children:[r?u.jsx("button",{type:"button",className:"ft-iconbtn","aria-label":"Fullscreen",onClick:l,
+children:u.jsx(bt,{d:zm})}):null,u.jsx("button",{type:"button",className:"ft-iconbtn","aria-label":"Open timer in its ow\
+n window",title:"Open timer in its own window",onClick:a,children:u.jsx(bt,{d:Fm})}),u.jsx("button",{type:"button",className:"\
+ft-iconbtn","aria-label":"Minimize to a small timer",title:"Minimize to a small timer",onClick:s,children:u.jsx(bt,{d:Im})}),
+u.jsx("button",{type:"button",className:`ft-iconbtn ${n==="tasks"?"is-active":""}`,"aria-label":"Tasks",onClick:i,children:u.
+jsx(bt,{d:Om})}),u.jsx("button",{type:"button",className:`ft-iconbtn ${n==="settings"?"is-active":""}`,"aria-label":"Set\
+tings",onClick:o,children:u.jsx(bt,{d:Dm})})]})]})}),Bm=It.memo(function({tasksState:t,setTasksState:n,week:r,ready:l,savedMessage:i,
 onClose:o}){const[s,a]=S.useState(""),[c,v]=S.useState(1),y=t.tasks,m=Math.max(1,...r.map(g=>g.minutes)),k=()=>{const g=s.
 trim();if(!g)return;const w={id:`t${Date.now()}`,title:g,est:c,done:0,completed:!1};n(I=>({tasks:[...I.tasks,w],activeId:I.
 activeId||w.id})),a(""),v(1)};return u.jsxs("aside",{className:"ft-sheet","aria-label":"Tasks",children:[u.jsxs("div",{className:"\
