@@ -72,23 +72,32 @@ under 250 KB). GitHub Pages then republishes automatically from `main` /
 
 ## Animated video scenes
 
-`src/scenes-b64/<id>.mp4.js` (+ matching `<id>.jpg.js` poster) are short muted loop
-clips stored as base64 text modules, so the whole app builds from a fresh clone
-with no binary assets. They build into lazy `scene-*.js` chunks that load only
-when a visitor picks that scene, and pause when the tab is hidden or the timer is
-minimized. With reduced-motion on, only the poster image shows.
+The repository-root `scenes/` directory holds the scene media as real files. GitHub Pages
+serves it directly, and the Vite build uses it as `publicDir` (copied verbatim into `dist/`),
+so one committed copy both runs the live site and keeps a fresh clone buildable: for each scene `<id>`, a portrait video `<id>-p.mp4`
+(1080x1920), a landscape video `<id>-l.mp4` (1920x1080), and a poster for each orientation
+(`<id>-p.jpg`, `<id>-l.jpg`). Real same-origin URLs are used on purpose: blob/data-URI video
+is unreliable on iOS Safari, and separate orientation crops keep framing correct on phones
+and desktops. Videos load only when a scene is selected; posters load only while the
+settings picker is open. Playback pauses when the tab is hidden or the timer is minimized,
+retries on the next tap when autoplay is blocked (e.g. low power mode), and shows only the
+poster under the visitor's reduced-motion setting.
 
-Sources (all Pixabay, free to use under the Pixabay Content License
-https://pixabay.com/service/license-summary/ - commercial and noncommercial use
-allowed, modification allowed, no attribution required):
+Sources (all Pixabay; each asset page states "Free for use under the Pixabay Content License",
+https://pixabay.com/service/license-summary/ - commercial and noncommercial use allowed,
+modification allowed, no attribution required; these are NOT public-domain/CC0):
 
-- shrine.mp4 - "Anime Style, Fantasy, Japanese Shrine" https://pixabay.com/videos/anime-style-fantasy-japanese-shrine-348164/
-- rainy-window.mp4 - "Anime, Lofi, Rain" https://pixabay.com/videos/anime-lofi-rain-anime-girl-376433/
-- misty-river.mp4 - "River, Mist, Water" https://pixabay.com/videos/river-mist-water-nature-loop-344726/
-- water-garden.mp4 - "Gardens, Loop, Waterfall" https://pixabay.com/videos/gardens-loop-waterfall-meditation-290959/
+- shrine - "Anime Style, Fantasy, Japanese Shrine" https://pixabay.com/videos/anime-style-fantasy-japanese-shrine-348164/
+- rainy-window - "Anime, Lofi, Rain" https://pixabay.com/videos/anime-lofi-rain-anime-girl-376433/
+- misty-river - "River, Mist, Water" https://pixabay.com/videos/river-mist-water-nature-loop-344726/
+- water-garden - "Gardens, Loop, Waterfall" https://pixabay.com/videos/gardens-loop-waterfall-meditation-290959/
+- sakura-night - "Night, Moon, Spring" https://pixabay.com/videos/night-moon-spring-cherry-blossom-155672/
+- night-train - "Anime, Lofi, Cozy" https://pixabay.com/videos/anime-lofi-cozy-night-train-311602/
+- japan-street - "AI Generated, Japan, Street" https://pixabay.com/videos/ai-generated-japan-street-270367/
+- cozy-window - "Heavy Rain, Night, Cozy Window" https://pixabay.com/videos/heavy-rain-night-cozy-window-376049/
+- balcony-dusk - "Anime, Lofi, Anime Girl, Japan" https://pixabay.com/videos/anime-lofi-anime-girl-japan-376434/
 
-Re-encoded for the web with ffmpeg (720px wide, H.264 yuv420p, no audio,
-faststart, ~CRF 30, max 10s). To add a scene: encode `<id>.mp4` and a small
-`<id>.jpg` poster, write each as a base64 module in `src/scenes-b64/`
-(`export default "data:video/mp4;base64,..."`), add it to `SCENES`,
-`SCENE_VIDEO_LOADERS` and `SCENE_POSTER_LOADERS` in `src/App.tsx`, then rebuild.
+Encoded with ffmpeg: H.264 yuv420p, no audio, faststart, CRF 24, 5-12s loops; portrait cuts
+are 1080x1920 center/subject crops, landscape cuts 1920x1080. To add a scene: encode both
+orientations plus posters into `scenes/`, add the id/name to `SCENES` in
+`src/App.tsx`, rebuild, and copy the new `dist/` files to the repo root.
