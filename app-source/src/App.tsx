@@ -118,14 +118,37 @@ const ANIMATED_BGS = [
     { id: 'rainfall', name: 'Rain streaks' },
 ];
 
-// Animated video scenes. Files live at the site root (scene-<id>.mp4 + scene-<id>.jpg poster).
-// Source: Pixabay, free to use under the Pixabay Content License (no attribution required). See README.
+// Animated video scenes, lazy-loaded like the photos. Source: Pixabay, free to use under the
+// Pixabay Content License (no attribution required). Asset IDs and regeneration: see README.
 const SCENES = [
     { id: 'shrine', name: 'Moonlit shrine' },
     { id: 'rainy-window', name: 'Rainy window' },
     { id: 'misty-river', name: 'Misty river' },
     { id: 'water-garden', name: 'Water garden' },
 ];
+const SCENE_VIDEO_LOADERS: Record<string, () => Promise<{ default: string }>> = {
+    shrine: () => import('./scenes/shrine.mp4'),
+    'rainy-window': () => import('./scenes/rainy-window.mp4'),
+    'misty-river': () => import('./scenes/misty-river.mp4'),
+    'water-garden': () => import('./scenes/water-garden.mp4'),
+};
+const SCENE_POSTER_LOADERS: Record<string, () => Promise<{ default: string }>> = {
+    shrine: () => import('./scenes/shrine.jpg'),
+    'rainy-window': () => import('./scenes/rainy-window.jpg'),
+    'misty-river': () => import('./scenes/misty-river.jpg'),
+    'water-garden': () => import('./scenes/water-garden.jpg'),
+};
+const sceneVideoCache: Record<string, string> = {};
+const scenePosterCache: Record<string, string> = {};
+
+function dataUriToBlobUrl(dataUri: string): string {
+    const comma = dataUri.indexOf(',');
+    const mime = dataUri.slice(5, comma).replace(';base64', '');
+    const bin = atob(dataUri.slice(comma + 1));
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return URL.createObjectURL(new Blob([bytes], { type: mime }));
+}
 
 const ACCENTS = [
     { id: 'mint', name: 'Mint', value: '#9fd8c6' },
@@ -355,10 +378,24 @@ function Toggle({ label, hint, checked, onChange }: { label: string; hint?: stri
 // ---------- memoized subtrees: the ticking clock must not re-render these ----------
 const SceneVideo = React.memo(function SceneVideo({ id, paused }: { id: string; paused: boolean }) {
     const ref = useRef<HTMLVideoElement | null>(null);
+    const [urls, setUrls] = useState<{ video: string; poster: string } | null>(null);
     const [reduceMotion] = useState(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     useEffect(() => {
+        let alive = true;
+        const vLoader = SCENE_VIDEO_LOADERS[id];
+        if (!vLoader) return;
+        const pLoader = SCENE_POSTER_LOADERS[id];
+        Promise.all([vLoader(), pLoader ? pLoader() : Promise.resolve(null)]).then(([v, p]) => {
+            if (!alive) return;
+            const video = sceneVideoCache[id] || (sceneVideoCache[id] = dataUriToBlobUrl(v.default));
+            const poster = p ? (scenePosterCache[id] || (scenePosterCache[id] = p.default)) : '';
+            setUrls({ video, poster });
+        }).catch(() => { /* keep blank fallback */ });
+        return () => { alive = false; };
+    }, [id]);
+    useEffect(() => {
         const v = ref.current;
-        if (!v || reduceMotion) return;
+        if (!v || reduceMotion || !urls) return;
         const sync = () => {
             if (paused || document.hidden) v.pause();
             else v.play().catch(() => { /* autoplay blocked: poster stays */ });
@@ -366,9 +403,10 @@ const SceneVideo = React.memo(function SceneVideo({ id, paused }: { id: string; 
         sync();
         document.addEventListener('visibilitychange', sync);
         return () => document.removeEventListener('visibilitychange', sync);
-    }, [paused, reduceMotion, id]);
-    if (reduceMotion) return <img className="ft-bg ft-bgvideo" src={`scene-${id}.jpg`} alt="" aria-hidden="true" />;
-    return <video ref={ref} className="ft-bg ft-bgvideo" src={`scene-${id}.mp4`} poster={`scene-${id}.jpg`} muted loop autoPlay playsInline preload="auto" aria-hidden="true" />;
+    }, [paused, reduceMotion, id, urls]);
+    if (!urls) return <div className="ft-bg" />;
+    if (reduceMotion) return <img className="ft-bg ft-bgvideo" src={urls.poster} alt="" aria-hidden="true" />;
+    return <video ref={ref} className="ft-bg ft-bgvideo" src={urls.video} poster={urls.poster || undefined} muted loop autoPlay playsInline preload="auto" aria-hidden="true" />;
 });
 
 const Background = React.memo(function Background({ kind, id, scrim, builtinSrc, linkBgUrl, uploadBgUrl, paused }: {
@@ -390,6 +428,18 @@ const Background = React.memo(function Background({ kind, id, scrim, builtinSrc,
                 : <div className="ft-bg" style={style} />}
         <div className="ft-scrim" style={{ opacity: scrim }} />
     </>;
+});
+
+const SceneSwatch = React.memo(function SceneSwatch({ id, name, active, onPick }: { id: string; name: string; active: boolean; onPick: () => void }) {
+    const [src, setSrc] = useState<string | null>(scenePosterCache[id] || null);
+    useEffect(() => {
+        let alive = true;
+        if (!scenePosterCache[id] && SCENE_POSTER_LOADERS[id]) {
+            SCENE_POSTER_LOADERS[id]().then((m) => { scenePosterCache[id] = m.default; if (alive) setSrc(m.default); }).catch(() => { /* keep placeholder */ });
+        }
+        return () => { alive = false; };
+    }, [id]);
+    return <button type="button" className={`ft-bgswatch ${active ? 'is-active' : ''}`} style={src ? { backgroundImage: `url(${src})` } : undefined} aria-label={`${name} animated scene`} onClick={onPick} />;
 });
 
 const BgSwatch = React.memo(function BgSwatch({ id, name, active, onPick }: { id: string; name: string; active: boolean; onPick: () => void }) {
@@ -609,7 +659,7 @@ const SettingsSheet = React.memo(function SettingsSheet({ settings, patch, bgSta
             <h3>Background</h3>
             <h4 className="ft-subhead">Animated scenes</h4>
             <div className="ft-bggrid">
-                {SCENES.map((s) => <button key={s.id} type="button" className={`ft-bgswatch ${bg.kind === 'scene' && bg.id === s.id ? 'is-active' : ''}`} style={{ backgroundImage: `url(scene-${s.id}.jpg)` }} aria-label={`${s.name} animated scene`} onClick={() => patch({ background: { kind: 'scene', id: s.id } })} />)}
+                {SCENES.map((s) => <SceneSwatch key={s.id} id={s.id} name={s.name} active={bg.kind === 'scene' && bg.id === s.id} onPick={() => patch({ background: { kind: 'scene', id: s.id } })} />)}
             </div>
             <h4 className="ft-subhead">Animated</h4>
             <div className="ft-bggrid">
