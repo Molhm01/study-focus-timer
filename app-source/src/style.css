@@ -102,7 +102,7 @@ body { background: #101418; }
 .ft-ghost.is-compact { padding: 8px 16px; font-size: 13px; min-height: 40px; }
 .ft-hint { font-size: 12px; opacity: 0.55; margin: 0; }
 
-.ft-sheet { position: absolute; z-index: 4; top: 0; right: 0; bottom: 0; width: min(420px, 100%); background: rgba(16,18,23,0.97); padding: 18px 20px 32px; overflow-y: auto; color: #eee; box-shadow: -8px 0 32px rgba(0,0,0,0.4); }
+.ft-sheet { box-sizing: border-box; position: absolute; z-index: 4; top: 0; right: 0; bottom: 0; width: min(420px, 100%); background: rgba(16,18,23,0.97); padding: 18px 20px 32px; overflow-y: auto; color: #eee; box-shadow: -8px 0 32px rgba(0,0,0,0.4); }
 .ft-sheet-head { display: flex; align-items: center; justify-content: space-between; margin: -18px -20px 8px; padding: 14px 20px 10px; position: sticky; top: -18px; background: rgba(16,18,23,0.97); z-index: 2; }
 .ft-sheet-close { border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.08); color: #eee; width: 34px; height: 34px; border-radius: 50%; font-size: 15px; line-height: 1; cursor: pointer; flex: 0 0 auto; }
 .ft-sheet-close:hover { background: rgba(255,255,255,0.18); }
