@@ -127,16 +127,16 @@ const SCENES = [
     { id: 'water-garden', name: 'Water garden' },
 ];
 const SCENE_VIDEO_LOADERS: Record<string, () => Promise<{ default: string }>> = {
-    shrine: () => import('./scenes/shrine.mp4'),
-    'rainy-window': () => import('./scenes/rainy-window.mp4'),
-    'misty-river': () => import('./scenes/misty-river.mp4'),
-    'water-garden': () => import('./scenes/water-garden.mp4'),
+    shrine: () => import('./scenes-b64/shrine.mp4.js'),
+    'rainy-window': () => import('./scenes-b64/rainy-window.mp4.js'),
+    'misty-river': () => import('./scenes-b64/misty-river.mp4.js'),
+    'water-garden': () => import('./scenes-b64/water-garden.mp4.js'),
 };
 const SCENE_POSTER_LOADERS: Record<string, () => Promise<{ default: string }>> = {
-    shrine: () => import('./scenes/shrine.jpg'),
-    'rainy-window': () => import('./scenes/rainy-window.jpg'),
-    'misty-river': () => import('./scenes/misty-river.jpg'),
-    'water-garden': () => import('./scenes/water-garden.jpg'),
+    shrine: () => import('./scenes-b64/shrine.jpg.js'),
+    'rainy-window': () => import('./scenes-b64/rainy-window.jpg.js'),
+    'misty-river': () => import('./scenes-b64/misty-river.jpg.js'),
+    'water-garden': () => import('./scenes-b64/water-garden.jpg.js'),
 };
 const sceneVideoCache: Record<string, string> = {};
 const scenePosterCache: Record<string, string> = {};
