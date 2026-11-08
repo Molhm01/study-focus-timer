@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { ProfilePanel, PresenceBeacon } from './progression/ProfilePanel';
+import { recordTaskCompletion } from './progression/useProgression';
 
 // ---------- device-local storage (plain localStorage on standalone hosting) ----------
 function useLocalState<T>(key: string, initial: T): [T, (v: T | ((prev: T) => T)) => void, { ready: boolean; message: string }] {
@@ -822,9 +824,9 @@ const BgSwatch = React.memo(function BgSwatch({ id, name, active, onPick }: { id
     return <button type="button" className={`ft-bgswatch ${active ? 'is-active' : ''}`} style={src ? { backgroundImage: `url(${src})` } : undefined} aria-label={name} onClick={onPick} />;
 });
 
-const TopBar = React.memo(function TopBar({ chip, panel, fullscreenSupported, onFullscreen, onTasks, onSettings, onMinimize, onPopout }: {
-    chip: string | null; panel: 'none' | 'tasks' | 'settings'; fullscreenSupported: boolean;
-    onFullscreen: () => void; onTasks: () => void; onSettings: () => void; onMinimize: () => void; onPopout: () => void;
+const TopBar = React.memo(function TopBar({ chip, panel, fullscreenSupported, onFullscreen, onTasks, onSettings, onMinimize, onPopout, onProfile }: {
+    chip: string | null; panel: 'none' | 'tasks' | 'settings' | 'profile'; fullscreenSupported: boolean;
+    onFullscreen: () => void; onTasks: () => void; onSettings: () => void; onMinimize: () => void; onPopout: () => void; onProfile: () => void;
 }) {
     return <header className="ft-topbar">
         <span className="ft-brand">Study focus</span>
@@ -833,6 +835,7 @@ const TopBar = React.memo(function TopBar({ chip, panel, fullscreenSupported, on
             {fullscreenSupported ? <button type="button" className="ft-iconbtn" aria-label="Fullscreen" onClick={onFullscreen}><SvgIcon d={ICON_FULLSCREEN} /></button> : null}
             <button type="button" className="ft-iconbtn" aria-label="Open timer in its own window" title="Open timer in its own window" onClick={onPopout}><SvgIcon d={ICON_POPOUT} /></button>
             <button type="button" className="ft-iconbtn" aria-label="Minimize to a small timer" title="Minimize to a small timer" onClick={onMinimize}><SvgIcon d={ICON_MINIMIZE} /></button>
+            <button type="button" className={`ft-iconbtn ${panel === 'profile' ? 'is-active' : ''}`} aria-label="Profile and progress" title="Profile and progress" onClick={onProfile}><SvgIcon d={'M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9|M4 21c0-4 3.5-6.5 8-6.5s8 2.5 8 6.5'} /></button>
             <button type="button" className={`ft-iconbtn ${panel === 'tasks' ? 'is-active' : ''}`} aria-label="Tasks" onClick={onTasks}><SvgIcon d={ICON_TASKS} /></button>
             <button type="button" className={`ft-iconbtn ${panel === 'settings' ? 'is-active' : ''}`} aria-label="Settings" onClick={onSettings}><SvgIcon d={ICON_SETTINGS} /></button>
         </span>
@@ -868,7 +871,7 @@ const TasksSheet = React.memo(function TasksSheet({ tasksState, setTasksState, w
         {tasks.length === 0 ? <p className="ft-field-hint">No tasks yet. Add one to track pomodoros against it, or just run the timer.</p> : null}
         <ul className="ft-tasklist">
             {tasks.map((t) => <li key={t.id} className={`${t.id === tasksState.activeId ? 'is-active' : ''} ${t.completed ? 'is-done' : ''}`}>
-                <button type="button" className="ft-taskcheck" aria-label={t.completed ? 'Mark not done' : 'Mark done'} onClick={() => setTasksState((prev) => ({ ...prev, tasks: prev.tasks.map((x) => x.id === t.id ? { ...x, completed: !x.completed } : x) }))}>{t.completed ? '✓' : ''}</button>
+                <button type="button" className="ft-taskcheck" aria-label={t.completed ? 'Mark not done' : 'Mark done'} onClick={() => { if (!t.completed) recordTaskCompletion(t.id); setTasksState((prev) => ({ ...prev, tasks: prev.tasks.map((x) => x.id === t.id ? { ...x, completed: !x.completed } : x) })); }}>{t.completed ? '✓' : ''}</button>
                 <button type="button" className="ft-taskname" onClick={() => setTasksState((prev) => ({ ...prev, activeId: t.id }))}>{t.title}</button>
                 <span className="ft-taskcount">{t.done}/{t.est}</span>
                 <button type="button" className="ft-taskdel" aria-label={`Delete ${t.title}`} onClick={() => setTasksState((prev) => ({ tasks: prev.tasks.filter((x) => x.id !== t.id), activeId: prev.activeId === t.id ? null : prev.activeId }))}>×</button>
@@ -1152,7 +1155,7 @@ function MainApp() {
     const [running, setRunning] = useState(false);
     const [remaining, setRemaining] = useState(durations.focus);
     const [cycleCount, setCycleCount] = useState(0);
-    const [panel, setPanel] = useState<'none' | 'tasks' | 'settings'>('none');
+    const [panel, setPanel] = useState<'none' | 'tasks' | 'settings' | 'profile'>('none');
     const [compact, setCompact] = useState(false);
     const endAtRef = useRef(0);
     const runningRef = useRef(false);
@@ -1518,6 +1521,7 @@ function MainApp() {
     const showSettingsPanel = panel === 'settings';
     const toggleTasks = useCallback(() => setPanel((p) => (p === 'tasks' ? 'none' : 'tasks')), []);
     const toggleSettings = useCallback(() => setPanel((p) => (p === 'settings' ? 'none' : 'settings')), []);
+    const toggleProfile = useCallback(() => setPanel((p) => (p === 'profile' ? 'none' : 'profile')), []);
 
     // keyboard shortcuts
     useEffect(() => {
@@ -1617,7 +1621,7 @@ function MainApp() {
     return <div className={`ft-root ${compact ? 'is-compact' : ''}`} style={{ ['--ft-accent' as string]: settings.accent, ['--ft-font' as string]: fontCss } as React.CSSProperties}>
         <Background kind={bg.kind} id={bg.id} scrim={settings.scrim} builtinSrc={builtinSrc} linkBg={linkBg} uploadBg={uploadBgMedia} paused={compact} animate={settings.bgAnimate !== false} customFit={settings.customFit || 'cover'} enhance={settings.enhance !== false} />
 
-        <TopBar chip={chip} panel={panel} fullscreenSupported={fullscreenSupported} onFullscreen={toggleFullscreen} onTasks={toggleTasks} onSettings={toggleSettings} onMinimize={minimize} onPopout={popOut} />
+        <TopBar chip={chip} panel={panel} fullscreenSupported={fullscreenSupported} onFullscreen={toggleFullscreen} onTasks={toggleTasks} onSettings={toggleSettings} onMinimize={minimize} onPopout={popOut} onProfile={toggleProfile} />
 
         <main className="ft-center">
             <nav className="ft-modes" aria-label="Timer mode">
@@ -1656,6 +1660,8 @@ function MainApp() {
             <button type="button" className="ft-compactbtn" aria-label="Expand timer" onClick={() => setCompact(false)}>⤢</button>
         </div> : null}
 
+        {panel === 'profile' ? <ProfilePanel onClose={() => setPanel('none')} /> : null}
+        <PresenceBeacon />
         {showTasksPanel ? <TasksSheet tasksState={tasksState} setTasksState={setTasksState} week={week} ready={ready} savedMessage={tasksSaved.message || statsSaved.message || ''} onClose={() => setPanel('none')} /> : null}
 
         {showSettingsPanel ? <SettingsSheet
