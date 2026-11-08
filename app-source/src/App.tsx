@@ -55,7 +55,7 @@ const photoCache: Record<string, string> = {};
 const thumbCache: Record<string, string> = {};
 
 type Phase = 'focus' | 'short' | 'long';
-type BgKind = 'builtin' | 'gradient' | 'link' | 'upload' | 'animated';
+type BgKind = 'builtin' | 'gradient' | 'link' | 'upload' | 'animated' | 'scene';
 
 interface Settings {
     focusMin: number; shortMin: number; longMin: number; longEvery: number;
@@ -116,6 +116,15 @@ const ANIMATED_BGS = [
     { id: 'meteor', name: 'Falling stars' },
     { id: 'waves', name: 'Night waves' },
     { id: 'rainfall', name: 'Rain streaks' },
+];
+
+// Animated video scenes. Files live at the site root (scene-<id>.mp4 + scene-<id>.jpg poster).
+// Source: Pixabay, free to use under the Pixabay Content License (no attribution required). See README.
+const SCENES = [
+    { id: 'shrine', name: 'Moonlit shrine' },
+    { id: 'rainy-window', name: 'Rainy window' },
+    { id: 'misty-river', name: 'Misty river' },
+    { id: 'water-garden', name: 'Water garden' },
 ];
 
 const ACCENTS = [
@@ -344,9 +353,27 @@ function Toggle({ label, hint, checked, onChange }: { label: string; hint?: stri
 }
 
 // ---------- memoized subtrees: the ticking clock must not re-render these ----------
-const Background = React.memo(function Background({ kind, id, scrim, builtinSrc, linkBgUrl, uploadBgUrl }: {
+const SceneVideo = React.memo(function SceneVideo({ id, paused }: { id: string; paused: boolean }) {
+    const ref = useRef<HTMLVideoElement | null>(null);
+    const [reduceMotion] = useState(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    useEffect(() => {
+        const v = ref.current;
+        if (!v || reduceMotion) return;
+        const sync = () => {
+            if (paused || document.hidden) v.pause();
+            else v.play().catch(() => { /* autoplay blocked: poster stays */ });
+        };
+        sync();
+        document.addEventListener('visibilitychange', sync);
+        return () => document.removeEventListener('visibilitychange', sync);
+    }, [paused, reduceMotion, id]);
+    if (reduceMotion) return <img className="ft-bg ft-bgvideo" src={`scene-${id}.jpg`} alt="" aria-hidden="true" />;
+    return <video ref={ref} className="ft-bg ft-bgvideo" src={`scene-${id}.mp4`} poster={`scene-${id}.jpg`} muted loop autoPlay playsInline preload="auto" aria-hidden="true" />;
+});
+
+const Background = React.memo(function Background({ kind, id, scrim, builtinSrc, linkBgUrl, uploadBgUrl, paused }: {
     kind: BgKind; id?: string; scrim: number;
-    builtinSrc: string | null; linkBgUrl: string | null; uploadBgUrl: string | null;
+    builtinSrc: string | null; linkBgUrl: string | null; uploadBgUrl: string | null; paused?: boolean;
 }) {
     let style: React.CSSProperties = {};
     if (kind === 'builtin' && builtinSrc) style = { backgroundImage: `url(${builtinSrc})` };
@@ -358,7 +385,9 @@ const Background = React.memo(function Background({ kind, id, scrim, builtinSrc,
     return <>
         {kind === 'animated'
             ? <div className={`ft-anim ft-anim-${animId}`} aria-hidden="true"><i /><i /><i /></div>
-            : <div className="ft-bg" style={style} />}
+            : kind === 'scene' && SCENES.some((s) => s.id === id)
+                ? <SceneVideo id={id!} paused={!!paused} />
+                : <div className="ft-bg" style={style} />}
         <div className="ft-scrim" style={{ opacity: scrim }} />
     </>;
 });
@@ -391,9 +420,9 @@ const TopBar = React.memo(function TopBar({ chip, panel, fullscreenSupported, on
     </header>;
 });
 
-const TasksSheet = React.memo(function TasksSheet({ tasksState, setTasksState, week, ready, savedMessage }: {
+const TasksSheet = React.memo(function TasksSheet({ tasksState, setTasksState, week, ready, savedMessage, onClose }: {
     tasksState: TasksState; setTasksState: (v: TasksState | ((p: TasksState) => TasksState)) => void;
-    week: { label: string; minutes: number }[]; ready: boolean; savedMessage: string;
+    week: { label: string; minutes: number }[]; ready: boolean; savedMessage: string; onClose: () => void;
 }) {
     const [newTask, setNewTask] = useState('');
     const [newEst, setNewEst] = useState(1);
@@ -407,7 +436,7 @@ const TasksSheet = React.memo(function TasksSheet({ tasksState, setTasksState, w
         setNewTask(''); setNewEst(1);
     };
     return <aside className="ft-sheet" aria-label="Tasks">
-        <div className="ft-sheet-head"><h2>Tasks</h2><span className="ft-field-hint">Close with the ☰ button</span></div>
+        <div className="ft-sheet-head"><h2>Tasks</h2><button type="button" className="ft-sheet-close" aria-label="Close tasks" onClick={onClose}>✕</button></div>
         <div className="ft-addtask">
             <input value={newTask} placeholder="What are you studying?" onChange={(e) => setNewTask(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') addTask(); }} maxLength={120} />
             <span className="ft-stepper is-small">
@@ -437,7 +466,7 @@ const TasksSheet = React.memo(function TasksSheet({ tasksState, setTasksState, w
     </aside>;
 });
 
-const SettingsSheet = React.memo(function SettingsSheet({ settings, patch, bgStatus, soundStatus, lastBgSrcRef, lastSndSrcRef, resolveLinkBg, resolveCustomSound, uploadBg, uploadSound, previewAlarm, requestNotifications, notificationsSupported, wakeLockSupported, onResetSettings, savedMessage }: {
+const SettingsSheet = React.memo(function SettingsSheet({ settings, patch, bgStatus, soundStatus, lastBgSrcRef, lastSndSrcRef, resolveLinkBg, resolveCustomSound, uploadBg, uploadSound, previewAlarm, requestNotifications, notificationsSupported, wakeLockSupported, onResetSettings, savedMessage, onClose }: {
     settings: Settings; patch: (part: Partial<Settings>) => void;
     bgStatus: string; soundStatus: string;
     lastBgSrcRef: React.MutableRefObject<string>; lastSndSrcRef: React.MutableRefObject<string>;
@@ -445,7 +474,7 @@ const SettingsSheet = React.memo(function SettingsSheet({ settings, patch, bgSta
     uploadBg: (file: File | undefined) => void; uploadSound: (file: File | undefined) => void;
     previewAlarm: (id: string) => void; requestNotifications: (on: boolean) => void;
     notificationsSupported: boolean; wakeLockSupported: boolean;
-    onResetSettings: () => void; savedMessage: string;
+    onResetSettings: () => void; savedMessage: string; onClose: () => void;
 }) {
     const [bgInput, setBgInput] = useState('');
     const [soundInput, setSoundInput] = useState('');
@@ -472,7 +501,7 @@ const SettingsSheet = React.memo(function SettingsSheet({ settings, patch, bgSta
     };
 
     return <aside className="ft-sheet" aria-label="Settings">
-        <div className="ft-sheet-head"><h2>Settings</h2><span className="ft-field-hint">Close with the ⚙ button</span></div>
+        <div className="ft-sheet-head"><h2>Settings</h2><button type="button" className="ft-sheet-close" aria-label="Close settings" onClick={onClose}>✕</button></div>
 
         <section>
             <h3>Appearance</h3>
@@ -578,6 +607,10 @@ const SettingsSheet = React.memo(function SettingsSheet({ settings, patch, bgSta
 
         <section>
             <h3>Background</h3>
+            <h4 className="ft-subhead">Animated scenes</h4>
+            <div className="ft-bggrid">
+                {SCENES.map((s) => <button key={s.id} type="button" className={`ft-bgswatch ${bg.kind === 'scene' && bg.id === s.id ? 'is-active' : ''}`} style={{ backgroundImage: `url(scene-${s.id}.jpg)` }} aria-label={`${s.name} animated scene`} onClick={() => patch({ background: { kind: 'scene', id: s.id } })} />)}
+            </div>
             <h4 className="ft-subhead">Animated</h4>
             <div className="ft-bggrid">
                 {ANIMATED_BGS.map((a) => <button key={a.id} type="button" className={`ft-bgswatch ft-animsw ft-animsw-${a.id} ${bg.kind === 'animated' && bg.id === a.id ? 'is-active' : ''}`} aria-label={`${a.name} animated background`} onClick={() => patch({ background: { kind: 'animated', id: a.id } })} />)}
@@ -1006,7 +1039,7 @@ export function App() {
     const spotifySrc = settings.spotify ? spotifyEmbedUrl(settings.spotify) : null;
 
     return <div className={`ft-root ${compact ? 'is-compact' : ''}`} style={{ ['--ft-accent' as string]: settings.accent, ['--ft-font' as string]: fontCss } as React.CSSProperties}>
-        <Background kind={bg.kind} id={bg.id} scrim={settings.scrim} builtinSrc={builtinSrc} linkBgUrl={linkBgUrl} uploadBgUrl={uploadBgUrl} />
+        <Background kind={bg.kind} id={bg.id} scrim={settings.scrim} builtinSrc={builtinSrc} linkBgUrl={linkBgUrl} uploadBgUrl={uploadBgUrl} paused={compact} />
 
         <TopBar chip={chip} panel={panel} fullscreenSupported={fullscreenSupported} onFullscreen={toggleFullscreen} onTasks={toggleTasks} onSettings={toggleSettings} onMinimize={minimize} />
 
@@ -1047,7 +1080,7 @@ export function App() {
             <button type="button" className="ft-compactbtn" aria-label="Expand timer" onClick={() => setCompact(false)}>⤢</button>
         </div> : null}
 
-        {showTasksPanel ? <TasksSheet tasksState={tasksState} setTasksState={setTasksState} week={week} ready={ready} savedMessage={tasksSaved.message || statsSaved.message || ''} /> : null}
+        {showTasksPanel ? <TasksSheet tasksState={tasksState} setTasksState={setTasksState} week={week} ready={ready} savedMessage={tasksSaved.message || statsSaved.message || ''} onClose={() => setPanel('none')} /> : null}
 
         {showSettingsPanel ? <SettingsSheet
             settings={settings} patch={patch}
@@ -1059,6 +1092,7 @@ export function App() {
             notificationsSupported={notificationsSupported} wakeLockSupported={wakeLockSupported}
             onResetSettings={resetSettings}
             savedMessage={settingsSaved.message || ''}
+            onClose={() => setPanel('none')}
         /> : null}
 
         {spotifySrc ? <div className={`ft-spotify ${settings.spotifyOpen ? 'is-open' : ''}`}>
