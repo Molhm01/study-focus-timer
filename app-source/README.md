@@ -4,7 +4,7 @@ Source for https://molhm01.github.io/study-focus-timer/ .
 
 ## Build
 
-From `app-source`, run `npm ci`, `npx tsc --noEmit`, then `npm run build`. Copy the three emitted files from `dist` to the repository root. Runtime media carriers live in root `images/` and `sounds/`. They are split base64 text files because the deployment path accepts text reliably. The browser reconstructs JPEG/AAC bytes without upscaling. Keep these folders alongside the compiled files when hosting a clone. No API keys or server are needed. Existing visitor tasks, settings and timer progress stay in that visitor's browser.
+From `app-source`, run `npm install`, `npx tsc --noEmit`, then `npm run build`. Copy the three emitted files from `dist` to the repository root. Runtime media carriers live in root `images/images/` and `sounds/`. They are split base64 text files because the deployment path accepts text reliably. The browser reconstructs JPEG/AAC bytes without upscaling. Keep these folders alongside the compiled files when hosting a clone. No API keys or server are needed. Existing visitor tasks, settings and timer progress stay in that visitor's browser.
 
 ## Video backgrounds
 
