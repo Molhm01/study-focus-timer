@@ -31,26 +31,33 @@ function useLocalState<T>(key: string, initial: T): [T, (v: T | ((prev: T) => T)
 }
 
 // ---------- background photos: full images load on demand, thumbnails load for the picker ----------
-const PHOTO_LOADERS: Record<string, () => Promise<{ default: string }>> = {
-    rain: () => import('./photos/rain.jpg'),
-    library: () => import('./photos/library.jpg'),
-    coffee: () => import('./photos/coffee.jpg'),
-    desk: () => import('./photos/desk.jpg'),
-    mountains: () => import('./photos/mountains.jpg'),
-    forest: () => import('./photos/forest.jpg'),
-    stars: () => import('./photos/stars.jpg'),
-    ocean: () => import('./photos/ocean.jpg'),
+// Photos and thumbs are runtime files at the repo root (GitHub Pages serves them next to index.html).
+const PHOTO_FILES: Record<string, string> = {
+    rain: 'photos/12-rain.jpg',
+    library: 'photos/13-library.jpg',
+    coffee: 'photos/14-coffee.jpg',
+    desk: 'photos/15-desk.jpg',
+    mountains: 'photos/28-mountains.jpg',
+    forest: 'photos/17-forest.jpg',
+    stars: 'photos/18-stars.jpg',
+    ocean: 'photos/19-ocean.jpg',
 };
-const THUMB_LOADERS: Record<string, () => Promise<{ default: string }>> = {
-    rain: () => import('./thumbs/rain.jpg'),
-    library: () => import('./thumbs/library.jpg'),
-    coffee: () => import('./thumbs/coffee.jpg'),
-    desk: () => import('./thumbs/desk.jpg'),
-    mountains: () => import('./thumbs/mountains.jpg'),
-    forest: () => import('./thumbs/forest.jpg'),
-    stars: () => import('./thumbs/stars.jpg'),
-    ocean: () => import('./thumbs/ocean.jpg'),
+const THUMB_FILES: Record<string, string> = {
+    rain: 'thumbs/20-rain.jpg',
+    library: 'thumbs/21-library.jpg',
+    coffee: 'thumbs/22-coffee.jpg',
+    desk: 'thumbs/23-desk.jpg',
+    mountains: 'thumbs/24-mountains.jpg',
+    forest: 'thumbs/25-forest.jpg',
+    stars: 'thumbs/26-stars.jpg',
+    ocean: 'thumbs/27-ocean.jpg',
 };
+const PHOTO_LOADERS: Record<string, () => Promise<{ default: string }>> = Object.fromEntries(
+    Object.entries(PHOTO_FILES).map(([k, v]) => [k, () => Promise.resolve({ default: v })])
+);
+const THUMB_LOADERS: Record<string, () => Promise<{ default: string }>> = Object.fromEntries(
+    Object.entries(THUMB_FILES).map(([k, v]) => [k, () => Promise.resolve({ default: v })])
+);
 const photoCache: Record<string, string> = {};
 const thumbCache: Record<string, string> = {};
 
@@ -1186,4 +1193,4 @@ export function App() {
             </button>
         </div> : null}
     </div>;
-                            }
+        }
