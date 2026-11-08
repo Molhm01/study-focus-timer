@@ -388,6 +388,20 @@ async function fetchBlob(url: string): Promise<Blob> {
     return res.blob();
 }
 
+// Load an image as a blob: direct read first, then through the public weserv.nl relay at full size (no 1920px cap) for hosts that block cross-site reads.
+async function fetchImageBlob(url: string): Promise<Blob> {
+    try {
+        const blob = await fetchBlob(url);
+        if (blob.type.startsWith('image/')) return blob;
+        throw new Error('not an image');
+    } catch {
+        const proxied = `https://images.weserv.nl/?url=${encodeURIComponent(url.replace(/^https?:\/\//, ''))}`;
+        const blob = await fetchBlob(proxied);
+        if (!blob.type.startsWith('image/')) throw new Error('not an image');
+        return blob;
+    }
+}
+
 async function resolveImageSource(input: string): Promise<Blob> {
     const trimmed = input.trim();
     if (/pin\.it\//i.test(trimmed)) throw new Error('short pin link');
@@ -404,25 +418,15 @@ async function resolveImageSource(input: string): Promise<Blob> {
         if (!pick?.url) throw new Error('pin has no image');
         imageUrl = pick.url;
     }
-    // Pinterest CDN thumbnail links (i.pinimg.com/236x|564x|736x/...) upscale badly; request the original-resolution file and verify it by actually fetching it, falling back to the pasted URL if the original is missing.
+    // Pinterest CDN thumbnail links (i.pinimg.com/236x|564x|736x/...) upscale badly; request the original-resolution file and verify it by actually loading it, falling back to the pasted size if the original is missing. Browsers usually block cross-site reads of i.pinimg.com, so both candidates go through the public image relay when a direct read fails.
     const pinCdn = imageUrl.match(/^(https:\/\/i\.pinimg\.com)\/(?:236x|564x|736x)(\/.*)$/i);
     if (pinCdn) {
         try {
-            const origBlob = await fetchBlob(`${pinCdn[1]}/originals${pinCdn[2]}`);
-            if (origBlob.type.startsWith('image/')) return origBlob;
-        } catch { /* original unavailable; try the pasted size below */ }
+            return await fetchImageBlob(`${pinCdn[1]}/originals${pinCdn[2]}`);
+        } catch { /* original unavailable; use the pasted size below */ }
     }
     if (!/^https:\/\//i.test(imageUrl)) throw new Error('not a link');
-    try {
-        const blob = await fetchBlob(imageUrl);
-        if (blob.type.startsWith('image/')) return blob;
-        throw new Error('not an image');
-    } catch {
-        const proxied = `https://images.weserv.nl/?url=${encodeURIComponent(imageUrl.replace(/^https?:\/\//, ''))}`; // full size through the relay, no 1920px cap
-        const blob = await fetchBlob(proxied);
-        if (!blob.type.startsWith('image/')) throw new Error('not an image');
-        return blob;
-    }
+    return fetchImageBlob(imageUrl);
 }
 
 // ---------- spotify ----------
@@ -1499,4 +1503,4 @@ function MainApp() {
             </button>
         </div> : null}
     </div>;
-            }
+               }
