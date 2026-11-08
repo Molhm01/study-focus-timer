@@ -577,12 +577,17 @@ const SceneStage = React.memo(function SceneStage({ scene, paused, animate }: { 
     const [stack, setStack] = useState<SceneDef[]>([scene]);
     const [readyId, setReadyId] = useState<string | null>(null);
     const firstStill = useImageUrl('rain');
+    const currentId = useRef(scene.id);
     useEffect(() => {
+        currentId.current = scene.id;
         setStack((prev) => (prev.length && prev[prev.length - 1].id === scene.id) ? prev : [...prev.filter((s) => s.id !== scene.id).slice(-1), scene]);
     }, [scene]);
     const handleReady = useCallback((s: SceneDef) => {
+        // A scene that is no longer selected must never shrink the stack: its late "ready" would otherwise
+        // filter the stack down to a scene that is no longer in it, emptying the stage until reload.
+        if (s.id !== currentId.current) return;
         setReadyId(s.id);
-        window.setTimeout(() => setStack((prev) => prev.filter((x) => x.id === s.id)), 400);
+        window.setTimeout(() => { if (currentId.current === s.id) setStack((prev) => prev.filter((x) => x.id === s.id)); }, 400);
     }, []);
     const handleFail = useCallback((_s: SceneDef) => { /* failed scene keeps its error note; previous scene or the still stays visible behind it */ }, []);
     const loading = readyId === null || !stack.some((s) => s.id === readyId);
@@ -1503,4 +1508,4 @@ function MainApp() {
             </button>
         </div> : null}
     </div>;
-               }
+        }
