@@ -31,6 +31,11 @@ function useLocalState<T>(key: string, initial: T): [T, (v: T | ((prev: T) => T)
     return [value, set, { ready, message }];
 }
 
+const IMAGE_PARTS: Record<string,string[]> = {"curated":["images/curated-0.txt"],"rain": ["images/rain-0.txt", "images/rain-1.txt"], "thumb-rain": ["images/thumb-rain-0.txt"], "library": ["images/library-0.txt", "images/library-1.txt", "images/library-2.txt", "images/library-3.txt", "images/library-4.txt"], "thumb-library": ["images/thumb-library-0.txt"], "coffee": ["images/coffee-0.txt", "images/coffee-1.txt", "images/coffee-2.txt"], "thumb-coffee": ["images/thumb-coffee-0.txt"], "desk": ["images/desk-0.txt", "images/desk-1.txt", "images/desk-2.txt"], "thumb-desk": ["images/thumb-desk-0.txt"], "mountains": ["images/mountains-0.txt", "images/mountains-1.txt", "images/mountains-2.txt", "images/mountains-3.txt", "images/mountains-4.txt", "images/mountains-5.txt"], "thumb-mountains": ["images/thumb-mountains-0.txt"], "forest": ["images/forest-0.txt", "images/forest-1.txt", "images/forest-2.txt", "images/forest-3.txt"], "thumb-forest": ["images/thumb-forest-0.txt"], "stars": ["images/stars-0.txt"], "thumb-stars": ["images/thumb-stars-0.txt"], "ocean": ["images/ocean-0.txt", "images/ocean-1.txt", "images/ocean-2.txt"], "thumb-ocean": ["images/thumb-ocean-0.txt"], "catalog": ["images/catalog-0.txt", "images/catalog-1.txt", "images/catalog-2.txt", "images/catalog-3.txt", "images/catalog-4.txt", "images/catalog-5.txt", "images/catalog-6.txt"]};
+const imagePromises: Record<string,Promise<string>> = {};
+function imageUrl(id:string):Promise<string> { return imagePromises[id] ||= Promise.all(IMAGE_PARTS[id].map(async path=>{const r=await fetch(path);if(!r.ok)throw Error('Image unavailable');return r.text()})).then(parts=>'data:image/jpeg;base64,'+parts.join('').replace(/\s/g,'')); }
+function useImageUrl(id:string) {const [url,setUrl]=useState('');useEffect(()=>{let live=true;imageUrl(id).then(x=>{if(live)setUrl(x)}).catch(()=>{});return()=>{live=false}},[id]);return url;}
+
 // ---------- background photos: full images load on demand, thumbnails load for the picker ----------
 // Photos and thumbs are runtime files at the repo root (GitHub Pages serves them next to index.html).
 const PHOTO_FILES: Record<string, string> = {
@@ -54,10 +59,10 @@ const THUMB_FILES: Record<string, string> = {
     ocean: 'thumbs/27-ocean.jpg',
 };
 const PHOTO_LOADERS: Record<string, () => Promise<{ default: string }>> = Object.fromEntries(
-    Object.entries(PHOTO_FILES).map(([k, v]) => [k, () => Promise.resolve({ default: v })])
+    Object.keys(PHOTO_FILES).map(k => [k, () => imageUrl(k).then(url=>({default:url}))])
 );
 const THUMB_LOADERS: Record<string, () => Promise<{ default: string }>> = Object.fromEntries(
-    Object.entries(THUMB_FILES).map(([k, v]) => [k, () => Promise.resolve({ default: v })])
+    Object.keys(THUMB_FILES).map(k => [k, () => imageUrl('thumb-'+k).then(url=>({default:url}))])
 );
 const photoCache: Record<string, string> = {};
 const thumbCache: Record<string, string> = {};
@@ -130,23 +135,125 @@ const ANIMATED_BGS = [
 
 // Animated video scenes. Local scenes live at scenes/<id>-p.mp4 (portrait) and scenes/<id>-l.mp4
 // (landscape) with matching posters scenes/<id>-p.jpg / -l.jpg, encoded from native-resolution
-// masters (never upscaled) as long seamless loops. Remote scenes stream a single licensed file
+// masters. New scenes embed source video, blended at wrap time. Remote scenes stream a single licensed file
 // from its source CDN and use a local poster scenes/<id>.jpg. A video downloads only when its
 // scene is selected; posters load lazily while the picker is open.
-// Sources: Pixabay / Mixkit free licenses (per-asset pages in README). Free to use, NOT CC0.
-interface SceneDef { id: string; name: string; url?: string }
+// Sources: Pixabay Content License video embeddings; source links and notices in README. No Mixkit assets.
+interface SceneDef { id: string; name: string; url?: string; tile?: number; preview?: string }
 const SCENES: SceneDef[] = [
-    { id: 'shrine', name: 'Moonlit shrine' },
-    { id: 'rainy-window', name: 'Rainy window' },
-    { id: 'misty-river', name: 'Misty river' },
-    { id: 'water-garden', name: 'Water garden' },
-    { id: 'sakura-night', name: 'Island moon' },
-    { id: 'night-train', name: 'Night train' },
-    { id: 'japan-street', name: 'Sakura street' },
-    { id: 'cozy-window', name: 'Rainy desk' },
-    { id: 'balcony-dusk', name: 'Evening balcony' },
+    {"id": "shrine", "name": "Moonlit shrine", "url": "https://cdn.pixabay.com/video/2026/04/22/348164_large.mp4", "tile": 0, "preview": "curated"},
+    {"id": "rainy-window", "name": "Rainy window", "url": "https://cdn.pixabay.com/video/2026/09/15/376433_medium.mp4", "tile": 1, "preview": "curated"},
+    {"id": "misty-river", "name": "Misty river", "url": "https://cdn.pixabay.com/video/2026/04/05/344726_medium.mp4", "tile": 2, "preview": "curated"},
+    {"id": "water-garden", "name": "Water garden", "url": "https://cdn.pixabay.com/video/2025/07/12/290959_medium.mp4", "tile": 3, "preview": "curated"},
+    {"id": "sakura-night", "name": "Island moon", "url": "https://cdn.pixabay.com/video/2023/03/22/155672-810706799_large.mp4", "tile": 4, "preview": "curated"},
+    {"id": "night-train", "name": "Night train", "url": "https://cdn.pixabay.com/video/2025/10/23/311602_medium.mp4", "tile": 5, "preview": "curated"},
+    {"id": "japan-street", "name": "Sakura street", "url": "https://cdn.pixabay.com/video/2025/04/07/270367_medium.mp4", "tile": 6, "preview": "curated"},
+    {"id": "cozy-window", "name": "Rainy desk", "url": "https://cdn.pixabay.com/video/2026/09/13/376049_large.mp4", "tile": 7, "preview": "curated"},
+    {"id": "balcony-dusk", "name": "Evening balcony", "url": "https://cdn.pixabay.com/video/2026/09/15/376434_medium.mp4", "tile": 8, "preview": "curated"},
 ];
-const SCENES_EXTRA: SceneDef[] = [];
+const SCENES_EXTRA: SceneDef[] = [
+    {"id": "anime-lofi-rain-363709", "name": "Rainy bus stop", "url": "https://cdn.pixabay.com/video/2026/07/13/363709_medium.mp4", "tile": 0},
+    {"id": "anime-lofi-record-363710", "name": "Record shop", "url": "https://cdn.pixabay.com/video/2026/07/13/363710_medium.mp4", "tile": 1},
+    {"id": "aurora-borealis-northern-186969-879222062", "name": "Aurora lake", "url": "https://cdn.pixabay.com/video/2023/10/29/186969-879222062_medium.mp4", "tile": 2},
+    {"id": "autumn-forest-trees-313784", "name": "Autumn nook", "url": "https://cdn.pixabay.com/video/2025/11/04/313784_medium.mp4", "tile": 3},
+    {"id": "autumn-forest-trees-313787", "name": "Autumn nook", "url": "https://cdn.pixabay.com/video/2025/11/04/313787_medium.mp4", "tile": 4},
+    {"id": "autumn-nature-cabin-324160", "name": "Cabin bedroom", "url": "https://cdn.pixabay.com/video/2025/12/24/324160_medium.mp4", "tile": 5},
+    {"id": "autumn-nature-cabin-324164", "name": "Cabin bedroom", "url": "https://cdn.pixabay.com/video/2025/12/24/324164_medium.mp4", "tile": 6},
+    {"id": "autumn-relaxation-forest-309119", "name": "Autumn lake", "url": "https://cdn.pixabay.com/video/2025/10/10/309119_medium.mp4", "tile": 7},
+    {"id": "beach-ocean-night-384362", "name": "Stormy coast", "url": "https://cdn.pixabay.com/video/2026/10/22/384362_medium.mp4", "tile": 8},
+    {"id": "bioluminescence-beach-waves-343671", "name": "Starlit shore", "url": "https://cdn.pixabay.com/video/2026/03/31/343671_medium.mp4", "tile": 9},
+    {"id": "bioluminescence-beach-waves-346010", "name": "Midnight waves", "url": "https://cdn.pixabay.com/video/2026/04/12/346010_medium.mp4", "tile": 10},
+    {"id": "bioluminescence-bioluminescent-ocean-381552", "name": "Glowing ocean", "url": "https://cdn.pixabay.com/video/2026/10/08/381552_medium.mp4", "tile": 11},
+    {"id": "bioluminescent-beach-375118-375118", "name": "Aurora coast", "url": "https://cdn.pixabay.com/video/2026/09/08/375118_medium.mp4", "tile": 12},
+    {"id": "boats-moon-moonlight-381338", "name": "Moonlit boats", "url": "https://cdn.pixabay.com/video/2026/10/07/381338_medium.mp4", "tile": 13},
+    {"id": "bonfire-flames-fire-201688-916116512", "name": "Bonfire", "url": "https://cdn.pixabay.com/video/2024/02/23/201688-916116512_medium.mp4", "tile": 14},
+    {"id": "book-candle-stars-184469-873483892", "name": "Candlelit book", "url": "https://cdn.pixabay.com/video/2023/10/10/184469-873483892_medium.mp4", "tile": 15},
+    {"id": "book-study-books-347655", "name": "Library fire", "url": "https://cdn.pixabay.com/video/2026/04/19/347655_medium.mp4", "tile": 16},
+    {"id": "campfire-bonfire-flames-225422", "name": "Campfire embers", "url": "https://cdn.pixabay.com/video/2024/08/08/225422_medium.mp4", "tile": 17},
+    {"id": "candle-flame-advent-311235", "name": "Rainy candle", "url": "https://cdn.pixabay.com/video/2025/10/21/311235_medium.mp4", "tile": 18},
+    {"id": "candle-flame-advent-312390", "name": "Rainy candle", "url": "https://cdn.pixabay.com/video/2025/10/28/312390_medium.mp4", "tile": 19},
+    {"id": "candle-flame-candlelight-312404", "name": "Snowy window", "url": "https://cdn.pixabay.com/video/2025/10/28/312404_medium.mp4", "tile": 20},
+    {"id": "cedar-tree-line-211013", "name": "Cedar trail", "url": "https://cdn.pixabay.com/video/2024/05/07/211013_medium.mp4", "tile": 21},
+    {"id": "city-starry-sky-310146", "name": "Purple night", "url": "https://cdn.pixabay.com/video/2025/10/15/310146_medium.mp4", "tile": 22},
+    {"id": "coffee-cup-rest-309872", "name": "Rainy coffee", "url": "https://cdn.pixabay.com/video/2025/10/14/309872_medium.mp4", "tile": 23},
+    {"id": "coffee-living-room-237103", "name": "Fireside coffee", "url": "https://cdn.pixabay.com/video/2024/10/19/237103_medium.mp4", "tile": 24},
+    {"id": "coffee-tea-steam-285759", "name": "Morning steam", "url": "https://cdn.pixabay.com/video/2025/06/13/285759_medium.mp4", "tile": 25},
+    {"id": "cottage-cabin-house-180939-865223880", "name": "Garden cottage", "url": "https://cdn.pixabay.com/video/2023/09/16/180939-865223880_medium.mp4", "tile": 26},
+    {"id": "couch-sofa-rain-185888-876579680", "name": "Forest lounge", "url": "https://cdn.pixabay.com/video/2023/10/20/185888-876579680_medium.mp4", "tile": 27},
+    {"id": "cozy-bedroom-289797-289797", "name": "Cozy bedroom", "url": "https://cdn.pixabay.com/video/2025/07/06/289797_medium.mp4", "tile": 28},
+    {"id": "cozy-bedroom-modern-290857", "name": "Rainy bedroom", "url": "https://cdn.pixabay.com/video/2025/07/12/290857_medium.mp4", "tile": 29},
+    {"id": "cozy-bedroom-modern-290943", "name": "Rainy bedroom", "url": "https://cdn.pixabay.com/video/2025/07/12/290943_medium.mp4", "tile": 30},
+    {"id": "cozy-bedroom-modern-290944", "name": "Rainy bedroom", "url": "https://cdn.pixabay.com/video/2025/07/12/290944_medium.mp4", "tile": 31},
+    {"id": "cozy-winter-autumn-253056", "name": "Winter fire", "url": "https://cdn.pixabay.com/video/2025/01/17/253056_medium.mp4", "tile": 32},
+    {"id": "creek-snow-winter-190915-888878158", "name": "Snowy creek", "url": "https://cdn.pixabay.com/video/2023/11/27/190915-888878158_medium.mp4", "tile": 33},
+    {"id": "dark-ocean-ocean-372868", "name": "Ocean doorway", "url": "https://cdn.pixabay.com/video/2026/08/27/372868_medium.mp4", "tile": 34},
+    {"id": "dark-ocean-ocean-372869", "name": "Ocean doorway", "url": "https://cdn.pixabay.com/video/2026/08/27/372869_medium.mp4", "tile": 35},
+    {"id": "dark-room-storm-369507", "name": "Rainy room", "url": "https://cdn.pixabay.com/video/2026/08/09/369507_medium.mp4", "tile": 36},
+    {"id": "dream-nature-fantasy-297586", "name": "Winter cottage", "url": "https://cdn.pixabay.com/video/2025/08/15/297586_medium.mp4", "tile": 37},
+    {"id": "fireplace-fire-heat-327084", "name": "Fireplace", "url": "https://cdn.pixabay.com/video/2026/01/11/327084_medium.mp4", "tile": 38},
+    {"id": "fireplace-winter-snow-347140", "name": "Snowy lounge", "url": "https://cdn.pixabay.com/video/2026/04/17/347140_medium.mp4", "tile": 39},
+    {"id": "flowers-tree-moon-179020-861022089", "name": "Moonlit blossoms", "url": "https://cdn.pixabay.com/video/2023/09/03/179020-861022089_medium.mp4", "tile": 40},
+    {"id": "forest-nature-wood-329836", "name": "Moonlit forest", "url": "https://cdn.pixabay.com/video/2026/01/23/329836_medium.mp4", "tile": 41},
+    {"id": "ice-forest-frozen-254850", "name": "Frozen river", "url": "https://cdn.pixabay.com/video/2025/01/27/254850_medium.mp4", "tile": 42},
+    {"id": "landscape-cute-heaven-371729", "name": "Castle at night", "url": "https://cdn.pixabay.com/video/2026/08/21/371729_medium.mp4", "tile": 43},
+    {"id": "landscape-waterfall-water-298040", "name": "Forest falls", "url": "https://cdn.pixabay.com/video/2025/08/18/298040_medium.mp4", "tile": 44},
+    {"id": "library-books-363706-363706", "name": "Library desk", "url": "https://cdn.pixabay.com/video/2026/07/13/363706_medium.mp4", "tile": 45},
+    {"id": "lighthouse-landscape-nature-325141", "name": "Coastal lighthouse", "url": "https://cdn.pixabay.com/video/2025/12/31/325141_medium.mp4", "tile": 46},
+    {"id": "lighthouse-storm-ocean-373895", "name": "Midnight lighthouse", "url": "https://cdn.pixabay.com/video/2026/09/01/373895_medium.mp4", "tile": 47},
+    {"id": "lighthouse-wave-ocean-358853", "name": "Storm lighthouse", "url": "https://cdn.pixabay.com/video/2026/06/16/358853_medium.mp4", "tile": 48},
+    {"id": "loop-ocean-nature-358453", "name": "Silver waves", "url": "https://cdn.pixabay.com/video/2026/06/14/358453_medium.mp4", "tile": 49},
+    {"id": "luxury-bedroom-cozy-290401", "name": "Night lounge", "url": "https://cdn.pixabay.com/video/2025/07/09/290401_medium.mp4", "tile": 50},
+    {"id": "moon-clouds-stars-209264", "name": "Clouds and moon", "url": "https://cdn.pixabay.com/video/2024/04/24/209264_medium.mp4", "tile": 51},
+    {"id": "moon-full-moon-370403", "name": "Sunset ocean", "url": "https://cdn.pixabay.com/video/2026/08/13/370403_medium.mp4", "tile": 52},
+    {"id": "moon-nature-night-290116", "name": "Crimson moon", "url": "https://cdn.pixabay.com/video/2025/07/08/290116_medium.mp4", "tile": 53},
+    {"id": "moon-night-sky-256347", "name": "Still moonlight", "url": "https://cdn.pixabay.com/video/2025/02/04/256347_medium.mp4", "tile": 54},
+    {"id": "moon-trees-forest-183967-872226594", "name": "Forest moon", "url": "https://cdn.pixabay.com/video/2023/10/07/183967-872226594_medium.mp4", "tile": 55},
+    {"id": "moonlight-patrol-boat-290456", "name": "Moonlit sail", "url": "https://cdn.pixabay.com/video/2025/07/10/290456_medium.mp4", "tile": 56},
+    {"id": "mountains-lake-water-124774-732319023", "name": "Alpine lake", "url": "https://cdn.pixabay.com/video/2022/07/20/124774-732319023_medium.mp4", "tile": 57},
+    {"id": "nature-night-moonlight-313411", "name": "Golden moon", "url": "https://cdn.pixabay.com/video/2025/11/02/313411_medium.mp4", "tile": 58},
+    {"id": "night-old-capital-182475-868496329", "name": "Kyoto sunset", "url": "https://cdn.pixabay.com/video/2023/09/26/182475-868496329_medium.mp4", "tile": 59},
+    {"id": "night-view-moon-143565-782758320", "name": "City moon", "url": "https://cdn.pixabay.com/video/2022/12/19/143565-782758320_medium.mp4", "tile": 60},
+    {"id": "night-view-yamadas-283431", "name": "Night sky", "url": "https://cdn.pixabay.com/video/2025/06/03/283431_medium.mp4", "tile": 61},
+    {"id": "ocean-night-stars-377557", "name": "Ship at night", "url": "https://cdn.pixabay.com/video/2026/09/19/377557_medium.mp4", "tile": 62},
+    {"id": "ocean-scene-cinemagraph-372866", "name": "Coastal cabin", "url": "https://cdn.pixabay.com/video/2026/08/27/372866_medium.mp4", "tile": 63},
+    {"id": "ocean-sea-fog-299418", "name": "Misty ocean", "url": "https://cdn.pixabay.com/video/2025/08/24/299418_medium.mp4", "tile": 64},
+    {"id": "ocean-sea-waves-174033-850286651", "name": "Blue moon coast", "url": "https://cdn.pixabay.com/video/2023/07/31/174033-850286651_medium.mp4", "tile": 65},
+    {"id": "ocean-sea-waves-232793", "name": "Rocky sea", "url": "https://cdn.pixabay.com/video/2024/09/23/232793_medium.mp4", "tile": 66},
+    {"id": "purple-cosmic-space-278396", "name": "Purple cosmos", "url": "https://cdn.pixabay.com/video/2025/05/12/278396_medium.mp4", "tile": 67},
+    {"id": "radio-tower-night-211067", "name": "Tokyo tower", "url": "https://cdn.pixabay.com/video/2024/05/07/211067_medium.mp4", "tile": 68},
+    {"id": "rain-cobblestone-puddle-380412", "name": "Rainy cobbles", "url": "https://cdn.pixabay.com/video/2026/10/02/380412_medium.mp4", "tile": 69},
+    {"id": "rain-leaves-foliage-227700", "name": "Rainy leaves", "url": "https://cdn.pixabay.com/video/2024/08/21/227700_medium.mp4", "tile": 70},
+    {"id": "rain-nature-water-289712", "name": "Rainy path", "url": "https://cdn.pixabay.com/video/2025/07/05/289712_medium.mp4", "tile": 71},
+    {"id": "rain-outside-372862-372862", "name": "Storm lounge", "url": "https://cdn.pixabay.com/video/2026/08/27/372862_medium.mp4", "tile": 72},
+    {"id": "rain-raining-raindrops-199501-910530342", "name": "Rainy puddles", "url": "https://cdn.pixabay.com/video/2024/02/06/199501-910530342_medium.mp4", "tile": 73},
+    {"id": "rain-train-window-363703", "name": "Neon train", "url": "https://cdn.pixabay.com/video/2026/07/13/363703_medium.mp4", "tile": 74},
+    {"id": "rain-umbrella-night-368211", "name": "Rainy street", "url": "https://cdn.pixabay.com/video/2026/08/02/368211_medium.mp4", "tile": 75},
+    {"id": "sea-coast-japan-197525-905005651", "name": "Quiet coast", "url": "https://cdn.pixabay.com/video/2024/01/21/197525-905005651_medium.mp4", "tile": 76},
+    {"id": "sea-full-moon-227600", "name": "Moonlit surf", "url": "https://cdn.pixabay.com/video/2024/08/20/227600_medium.mp4", "tile": 77},
+    {"id": "sea-ocean-waves-269357", "name": "Moonlit boat", "url": "https://cdn.pixabay.com/video/2025/04/02/269357_medium.mp4", "tile": 78},
+    {"id": "sky-clouds-moon-243117", "name": "Violet sky", "url": "https://cdn.pixabay.com/video/2024/11/24/243117_medium.mp4", "tile": 79},
+    {"id": "snow-cold-scenery-167736-837429014", "name": "Snowy shrine", "url": "https://cdn.pixabay.com/video/2023/06/18/167736-837429014_medium.mp4", "tile": 80},
+    {"id": "starry-sky-milky-170888-844432955", "name": "Starry pines", "url": "https://cdn.pixabay.com/video/2023/07/10/170888-844432955_medium.mp4", "tile": 81},
+    {"id": "starry-sky-milky-285663", "name": "Starry pines", "url": "https://cdn.pixabay.com/video/2025/06/13/285663_medium.mp4", "tile": 82},
+    {"id": "steaming-mug-hot-322244", "name": "Warm coffee", "url": "https://cdn.pixabay.com/video/2025/12/16/322244_medium.mp4", "tile": 83},
+    {"id": "table-epoxy-lounge-298514", "name": "Alpine table", "url": "https://cdn.pixabay.com/video/2025/08/19/298514_medium.mp4", "tile": 84},
+    {"id": "train-commuting-train-170887-844432947", "name": "City commute", "url": "https://cdn.pixabay.com/video/2023/07/10/170887-844432947_medium.mp4", "tile": 85},
+    {"id": "train-silence-anime-286593", "name": "Sunset train", "url": "https://cdn.pixabay.com/video/2025/06/19/286593_medium.mp4", "tile": 86},
+    {"id": "tree-foliage-rain-176026-854526263", "name": "Green leaves", "url": "https://cdn.pixabay.com/video/2023/08/14/176026-854526263_medium.mp4", "tile": 87},
+    {"id": "tree-forest-rain-205213-926480936", "name": "Rainy woodland", "url": "https://cdn.pixabay.com/video/2024/03/22/205213-926480936_medium.mp4", "tile": 88},
+    {"id": "tree-leaves-rain-172759-847869814", "name": "Wet leaves", "url": "https://cdn.pixabay.com/video/2023/07/22/172759-847869814_medium.mp4", "tile": 89},
+    {"id": "tree-stars-starry-176198-855206384", "name": "Violet branches", "url": "https://cdn.pixabay.com/video/2023/08/15/176198-855206384_medium.mp4", "tile": 90},
+    {"id": "trees-foliage-forest-171443-845465129", "name": "Mountain forest", "url": "https://cdn.pixabay.com/video/2023/07/13/171443-845465129_medium.mp4", "tile": 91},
+    {"id": "trees-forest-moon-183969-872226597", "name": "Night blossoms", "url": "https://cdn.pixabay.com/video/2023/10/07/183969-872226597_medium.mp4", "tile": 92},
+    {"id": "trees-leaves-snow-190667-888333548", "name": "Winter branches", "url": "https://cdn.pixabay.com/video/2023/11/25/190667-888333548_medium.mp4", "tile": 93},
+    {"id": "turtle-moon-night-289572", "name": "Turtles at night", "url": "https://cdn.pixabay.com/video/2025/07/04/289572_medium.mp4", "tile": 94},
+    {"id": "wallpaper-pixel-anime-247738", "name": "Neon city", "url": "https://cdn.pixabay.com/video/2024/12/19/247738_medium.mp4", "tile": 95},
+    {"id": "wallpaper-pixel-anime-247740", "name": "Sunset crossing", "url": "https://cdn.pixabay.com/video/2024/12/19/247740_medium.mp4", "tile": 96},
+    {"id": "wallpaper-pixel-anime-247741", "name": "Kyoto evening", "url": "https://cdn.pixabay.com/video/2024/12/19/247741_medium.mp4", "tile": 97},
+    {"id": "waterfall-trees-forest-208570", "name": "Forest waterfall", "url": "https://cdn.pixabay.com/video/2024/04/19/208570_medium.mp4", "tile": 98},
+    {"id": "waves-ocean-sea-372255", "name": "Moonlit ocean", "url": "https://cdn.pixabay.com/video/2026/08/23/372255_medium.mp4", "tile": 99},
+    {"id": "winter-snow-nature-336603", "name": "Snowy walk", "url": "https://cdn.pixabay.com/video/2026/02/25/336603_medium.mp4", "tile": 100},
+];
 const SCENE_FILES: Record<string, string> = {
     'balcony-dusk-l.jpg': '53-balcony-dusk-l.jpg',
     'balcony-dusk-l.mp4': '32-balcony-dusk-l.mp4',
@@ -454,36 +561,34 @@ function Toggle({ label, hint, checked, onChange }: { label: string; hint?: stri
 
 // ---------- memoized subtrees: the ticking clock must not re-render these ----------
 const SceneVideo = React.memo(function SceneVideo({ scene, paused, animate }: { scene: SceneDef; paused: boolean; animate: boolean }) {
-    const ref = useRef<HTMLVideoElement | null>(null);
-    const [portrait, setPortrait] = useState(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(orientation: portrait)').matches);
+    const root = useRef<HTMLDivElement | null>(null);
+    const [error,setError]=useState(false);
+    const fallback=useImageUrl('rain');
+    const control = useRef({ paused, animate }); control.current = { paused, animate };
+    const [portrait, setPortrait] = useState(() => window.matchMedia('(orientation: portrait)').matches);
+    useEffect(() => { const q=window.matchMedia('(orientation: portrait)');const f=()=>setPortrait(q.matches);q.addEventListener('change',f);return()=>q.removeEventListener('change',f); }, []);
+    const o=portrait?'p':'l';const src=scene.url || sceneMedia(scene.id,o,'mp4');
     useEffect(() => {
-        const mq = window.matchMedia('(orientation: portrait)');
-        const fn = () => setPortrait(mq.matches);
-        if (mq.addEventListener) mq.addEventListener('change', fn);
-        return () => { if (mq.removeEventListener) mq.removeEventListener('change', fn); };
-    }, []);
-    const o = portrait ? 'p' : 'l';
-    const poster = scenePoster(scene, o);
-    const src = scene.url || sceneMedia(scene.id, o, 'mp4');
-    useEffect(() => {
-        const v = ref.current;
-        if (!v) return;
-        const sync = () => {
-            if (paused || !animate || document.hidden) v.pause();
-            else v.play().catch(() => { /* autoplay blocked (e.g. low power mode): poster stays, next tap retries */ });
+        setError(false);const vs=Array.from<HTMLVideoElement>(root.current!.querySelectorAll('video'));let active=0,blending=false,dead=false,raf=0,started=false;
+        const play=(v:HTMLVideoElement)=>v.play().catch(()=>{});
+        const sync=()=>{if(control.current.paused||!control.current.animate||document.hidden){vs.forEach(v=>v.pause());}else{play(vs[active]);if(blending)play(vs[1-active]);}};
+        const paint=()=>{if(dead)return;const a=vs[active],b=vs[1-active];
+            if(!started&&a.readyState>=2){started=true;sync();}
+            const run=!control.current.paused&&control.current.animate&&!document.hidden;
+            if(!run){vs.forEach(v=>{if(!v.paused)v.pause();});}
+            else if(started){if(a.paused&&!a.ended)play(a);
+                const d=Math.min(1.5,a.duration/4);
+                if(!blending&&Number.isFinite(a.duration)&&a.currentTime>=a.duration-d&&b.readyState>=2){blending=true;b.currentTime=0;play(b);}
+                if(blending){if(b.paused)play(b);const mix=Math.min(1,b.currentTime/d);a.style.opacity=String(1-mix);b.style.opacity='1';
+                    if(mix>=1){a.pause();a.currentTime=0;a.style.zIndex='0';a.style.opacity='1';b.style.zIndex='1';active=1-active;blending=false;root.current!.dataset.wraps=String(Number(root.current!.dataset.wraps||0)+1);}
+                }
+            }raf=requestAnimationFrame(paint);
         };
-        sync();
-        // iOS low power mode only allows playback from a user gesture: retry on any tap.
-        const retry = () => { if (!paused && animate && !document.hidden) v.play().catch(() => { /* still blocked */ }); };
-        document.addEventListener('visibilitychange', sync);
-        window.addEventListener('pointerdown', retry);
-        return () => { document.removeEventListener('visibilitychange', sync); window.removeEventListener('pointerdown', retry); };
-    }, [paused, animate, src]);
-    if (!animate) return <img className="ft-bg ft-bgvideo" src={poster} alt="" aria-hidden="true" />;
-    return <>
-        <img className="ft-bg ft-bgvideo" src={poster} alt="" aria-hidden="true" />
-        <video ref={ref} key={src} className="ft-bg ft-bgvideo" src={src} poster={poster} muted loop autoPlay playsInline preload="auto" aria-hidden="true" />
-    </>;
+        vs[0].style.zIndex='1';vs[1].style.zIndex='0';raf=requestAnimationFrame(paint);
+        document.addEventListener('visibilitychange',sync);window.addEventListener('pointerdown',sync);
+        return()=>{dead=true;cancelAnimationFrame(raf);vs.forEach(v=>v.pause());document.removeEventListener('visibilitychange',sync);window.removeEventListener('pointerdown',sync);};
+    },[src]);
+    return <div ref={root} className="ft-scene-stage" key={src} style={{backgroundImage:fallback?`url(${fallback})`:undefined,backgroundSize:'cover',backgroundPosition:'center'}}>{error&&<span className="ft-stream-status">This scene couldn't load. Choose another background in Settings.</span>}{[0,1].map(n=><video onError={()=>setError(true)} key={n} className="ft-bg ft-bgvideo" src={src} muted playsInline disablePictureInPicture disableRemotePlayback preload="auto" aria-hidden="true" />)}</div>;
 });
 
 interface BgMedia { url: string; kind: 'image' | 'video' }
@@ -532,8 +637,9 @@ const CustomVideo = React.memo(function CustomVideo({ src, paused, animate }: { 
 });
 
 const SceneSwatch = React.memo(function SceneSwatch({ scene, active, onPick }: { scene: SceneDef; active: boolean; onPick: () => void }) {
+    const catalog=useImageUrl(scene.preview || 'catalog');const cols=scene.preview?3:8,rows=scene.preview?3:13;
     return <button type="button" className={`ft-bgswatch ft-bgswatch-named ${active ? 'is-active' : ''}`} aria-label={`${scene.name} animated scene`} onClick={onPick}>
-        <img className="ft-bgswatch-img" src={scenePoster(scene, 'p')} alt="" loading="lazy" decoding="async" />
+        {scene.tile != null ? <span className="ft-bgswatch-img" style={{backgroundImage: catalog ? `url(${catalog})` : undefined, backgroundSize:`${cols*100}% ${rows*100}%`,backgroundPosition: `${(scene.tile % cols)*100/(cols-1)}% ${Math.floor(scene.tile/cols)*100/(rows-1)}%`}} /> : <img className="ft-bgswatch-img" src={scenePoster(scene, 'p')} alt="" loading="lazy" decoding="async" />}
         <span className="ft-bgswatch-name">{scene.name}</span>
     </button>;
 });
@@ -789,14 +895,9 @@ const SettingsSheet = React.memo(function SettingsSheet({ settings, patch, bgSta
             <h4 className="ft-subhead">Animated scenes</h4>
             <div className="ft-bggrid">
                 {SCENES.map((s) => <SceneSwatch key={s.id} scene={s} active={bg.kind === 'scene' && bg.id === s.id} onPick={() => patch({ background: { kind: 'scene', id: s.id } })} />)}
+                </div><details className="ft-extra-scenes"><summary>More animated scenes ({SCENES_EXTRA.length})</summary><p className="ft-field-hint">Videos stream only when chosen. If a source is unavailable, choose another scene. Animation and pop-out support depend on your browser.</p><div className="ft-bggrid">{SCENES_EXTRA.map((s) => <SceneSwatch key={s.id} scene={s} active={bg.kind === 'scene' && bg.id === s.id} onPick={() => patch({ background: { kind: 'scene', id: s.id } })} />)}</div></details><div style={{display:'none'}}>
             </div>
-            {SCENES_EXTRA.length ? <>
-                <h4 className="ft-subhead">More animated scenes</h4>
-                <div className="ft-bggrid">
-                    {SCENES_EXTRA.map((s) => <SceneSwatch key={s.id} scene={s} active={bg.kind === 'scene' && bg.id === s.id} onPick={() => patch({ background: { kind: 'scene', id: s.id } })} />)}
-                </div>
-            </> : null}
-            <Toggle label="Animate backgrounds" hint="Motion starts by itself. Turn off to show a still poster and save battery." checked={settings.bgAnimate !== false} onChange={(v) => patch({ bgAnimate: v })} />
+            <Toggle label="Animate backgrounds" hint="Motion starts by itself. Turn off to pause motion and save battery." checked={settings.bgAnimate !== false} onChange={(v) => patch({ bgAnimate: v })} />
             <h4 className="ft-subhead">Animated</h4>
             <div className="ft-bggrid">
                 {ANIMATED_BGS.map((a) => <button key={a.id} type="button" className={`ft-bgswatch ft-animsw ft-animsw-${a.id} ${bg.kind === 'animated' && bg.id === a.id ? 'is-active' : ''}`} aria-label={`${a.name} animated background`} onClick={() => patch({ background: { kind: 'animated', id: a.id } })} />)}
@@ -832,7 +933,7 @@ const SettingsSheet = React.memo(function SettingsSheet({ settings, patch, bgSta
             <span className="ft-field-label">Start over</span>
             <button type="button" className="ft-ghost is-compact" onClick={onResetSettings}>Reset settings</button>
         </div>
-        <p className="ft-field-hint">Your settings, tasks and stats stay in this browser. Link backgrounds and sounds are fetched from the sites you paste, through the weserv.nl image relay when a direct load is blocked; Spotify playback happens inside Spotify's official player; nothing else is sent anywhere. {savedMessage}</p>
+        <p className="ft-field-hint">Your settings, tasks and stats stay in this browser. Link backgrounds and sounds are fetched from the sites you paste, through the weserv.nl image relay when a direct load is blocked; Spotify playback happens inside Spotify's official player; selected catalog videos stream from Pixabay's CDN. {savedMessage}</p>
     </aside>;
 });
 
@@ -1393,4 +1494,4 @@ function MainApp() {
             </button>
         </div> : null}
     </div>;
-}
+                                                                             }
