@@ -212,3 +212,26 @@ check('progression', 'quest set is deterministic within a day and streak quest a
     assert(names1 === names2, 'quest set changed across reload');
     await close();
 });
+
+check('progression', 'earned path: fresh guest completes real tasks and claims task quest once', async ({ browser, base }) => {
+    const { page, errors, close } = await newPage(browser, base);
+    await page.click('[aria-label="Tasks"]');
+    await page.waitForSelector('.ft-addtask input');
+    for (let i = 1; i <= 3; i++) {
+        await page.type('.ft-addtask input', 'Earned path ' + i);
+        await page.keyboard.press('Enter');
+        await page.waitForFunction((n) => [...document.querySelectorAll('.ft-taskname')].some((b) => b.textContent === 'Earned path ' + n), {}, i);
+        await page.evaluate((n) => [...document.querySelectorAll('.ft-tasklist li')].find((li) => li.textContent.includes('Earned path ' + n)).querySelector('.ft-taskcheck').click(), i);
+    }
+    await openProfile(page);
+    await sleep(300);
+    const row = await page.$$eval('.pf-quest', els => els.map(e => ({name:e.querySelector('strong').textContent, ready:!!e.querySelector('button')})));
+    assert(row.some(q => q.name.includes('task') && q.ready), 'real task quest did not become claimable');
+    await page.evaluate(() => [...document.querySelectorAll('.pf-quest')].find(e => e.textContent.includes('task')).querySelector('button').click());
+    await sleep(250);
+    const bonus = await lget(page, 'ft-xp-bonus.v1');
+    assert(bonus.questsClaimed === 1 && bonus.total > 0, 'earned reward not stored');
+    assert((await lget(page,'ft-progress-ledger.v1')).tasks && Object.keys((await lget(page,'ft-progress-ledger.v1')).tasks).length === 3, 'earned ledger not count-once');
+    assert(!errors.length, errors.join(' | '));
+    await close();
+});
