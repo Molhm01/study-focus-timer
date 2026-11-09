@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ProfilePanel, PresenceBeacon } from './progression/ProfilePanel';
+import { ProfilePanel, PresenceBeacon, ProfileAlert } from './progression/ProfilePanel';
 import { recordTaskCompletion } from './progression/useProgression';
 
 // ---------- device-local storage (plain localStorage on standalone hosting) ----------
@@ -1050,7 +1050,7 @@ const TopBar = React.memo(function TopBar({ chip, panel, fullscreenSupported, on
             {fullscreenSupported ? <button type="button" className="ft-iconbtn" aria-label="Fullscreen" onClick={onFullscreen}><SvgIcon d={ICON_FULLSCREEN} /></button> : null}
             <button type="button" className="ft-iconbtn" aria-label="Open timer in its own window" title="Open timer in its own window" onClick={onPopout}><SvgIcon d={ICON_POPOUT} /></button>
             <button type="button" className="ft-iconbtn" aria-label="Minimize to a small timer" title="Minimize to a small timer" onClick={onMinimize}><SvgIcon d={ICON_MINIMIZE} /></button>
-            <button type="button" className={`ft-iconbtn ${panel === 'profile' ? 'is-active' : ''}`} aria-label="Profile and progress" title="Profile and progress" onClick={onProfile}><SvgIcon d={'M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9|M4 21c0-4 3.5-6.5 8-6.5s8 2.5 8 6.5'} /></button>
+            <button type="button" className={`ft-iconbtn ${panel === 'profile' ? 'is-active' : ''}`} aria-label="Profile and progress" title="Profile and progress" onClick={onProfile}><SvgIcon d={'M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9|M4 21c0-4 3.5-6.5 8-6.5s8 2.5 8 6.5'} /><ProfileAlert /></button>
             <button type="button" className={`ft-iconbtn ${panel === 'tasks' ? 'is-active' : ''}`} aria-label="Tasks" onClick={onTasks}><SvgIcon d={ICON_TASKS} /></button>
             <button type="button" className={`ft-iconbtn ${panel === 'settings' ? 'is-active' : ''}`} aria-label="Settings" onClick={onSettings}><SvgIcon d={ICON_SETTINGS} /></button>
         </span>
@@ -2033,4 +2033,4 @@ function MainApp() {
 
         {settings.musicOpen !== false ? <MusicPlayer settings={settings} patch={patch} spotifySrc={spotifySrc} onOpenSettings={openSettingsPanel} /> : null}
     </div>;
-}
+              }
