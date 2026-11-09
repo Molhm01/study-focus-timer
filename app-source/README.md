@@ -8,7 +8,7 @@ From `app-source`, run `npm install`, `npx tsc --noEmit`, then `npm run build`. 
 
 ## Video backgrounds
 
-The timer offers 16 animated scenes, chosen as a small intentional set after a quality pass over hundreds of candidates: 11 flat illustrated lofi rooms and 5 photographed nature scenes (waterfalls, an alpine lake, surf and shoreline). Illustrated scenes are drawn as seamless loops and wrap natively. Photographed scenes are near-static tripod compositions with continuous water or fog motion; their repeat is covered by a short end-of-clip crossfade, which masks rather than eliminates the cut. All scenes fill the whole screen (object-fit cover); no letterbox bars. Videos stream directly from Pixabay's CDN only when a scene is selected (embedding permitted by Pixabay's terms); no video files are hosted in this repository. While a scene loads, the previous background stays on screen until the new stream's first frame is decoded (a still photo on first visit); a scene that fails keeps the previous background and shows a note, and the player retries other quality variants (medium, large, small, tiny) first. Phones start at the small variant so scenes start faster on mobile data. Playback pauses when hidden, minimized or animation is turned off. Muted inline autoplay is attempted; a tap retries if the browser blocks it. A saved scene ID that no longer exists falls back to the default scene instead of an empty background. The timer itself does not depend on the external video server.
+The timer offers 20 animated scenes, chosen as a small intentional set after a quality pass over hundreds of candidates: 15 flat illustrated lofi rooms and 5 photographed nature scenes (waterfalls, an alpine lake, surf and shoreline). Illustrated scenes are drawn as seamless loops and wrap natively. Photographed scenes are near-static tripod compositions with continuous water or fog motion; their repeat is covered by a short end-of-clip crossfade, which masks rather than eliminates the cut. All scenes fill the whole screen (object-fit cover); no letterbox bars. Videos stream directly from Pixabay's CDN only when a scene is selected (embedding permitted by Pixabay's terms); no video files are hosted in this repository. While a scene loads, the previous background stays on screen until the new stream's first frame is decoded (a still photo on first visit); a scene that fails keeps the previous background and shows a note, and the player retries other quality variants (medium, large, small, tiny) first. Phones start at the small variant so scenes start faster on mobile data. Playback pauses when hidden, minimized or animation is turned off. Muted inline autoplay is attempted; a tap retries if the browser blocks it. A saved scene ID that no longer exists falls back to the default scene instead of an empty background. The timer itself does not depend on the external video server.
 
 Scene sources (Pixabay Content License):
 
@@ -28,6 +28,10 @@ Scene sources (Pixabay Content License):
 - Alpine lake (Moraine Lake): https://pixabay.com/videos/moraine-lake-banff-national-park-292827/
 - Golden surf: https://pixabay.com/videos/ocean-waves-rocks-beach-sea-surf-20451/
 - Shoreline waves: https://pixabay.com/videos/beach-coast-ocean-wave-coastal-198488/
+- Warm library desk: https://pixabay.com/videos/girl-study-relaxing-alone-anime-214500/
+- Retro train cat: https://pixabay.com/videos/cat-train-retro-chill-relax-anime-301247/
+- Sleeping dog desk: https://pixabay.com/videos/anime-lofi-dog-cute-dog-345838/
+- Night reading: https://pixabay.com/videos/anime-lofi-girl-anime-girl-reading-345955/
 
 ## Photos
 
