@@ -668,6 +668,7 @@ const SceneStage = React.memo(function SceneStage({ scene, paused, animate }: { 
             return;
         }
         const key = ++keySeq.current;
+        setFailedKey(null);
         currentKey.current = key;
         const visible = cur.filter((x) => readyKeys.current.has(x.key)).slice(-1);
         applyStack([...visible, { s: scene, key }]);
@@ -703,7 +704,8 @@ const SceneStage = React.memo(function SceneStage({ scene, paused, animate }: { 
     return <>
         {!anyReady ? <div className="ft-bg" style={{ backgroundColor: '#101418' }} /> : null}
         {stack.map((x) => <SceneVideo key={x.key} scene={x.s} token={x.key} paused={paused} animate={animate} onReady={handleReady} onFail={handleFail} />)}
-        {loading && !curFailed ? <div className="ft-scene-switching" aria-hidden="true"><i /></div> : null}
+        {loading && !curFailed ? <div className="ft-scene-switching" role="status" aria-label="Loading selected background"><i /></div> : null}
+        {failedKey !== null ? <div className="ft-scene-error" role="status">Could not load {scene.name}. {anyReady ? "Your previous background is still playing." : "Choose another background to try again."}</div> : null}
     </>;
 });
 
@@ -1976,4 +1978,4 @@ function MainApp() {
 
         {settings.musicOpen !== false ? <MusicPlayer settings={settings} patch={patch} spotifySrc={spotifySrc} onOpenSettings={openSettingsPanel} /> : null}
     </div>;
-    }
+            }
