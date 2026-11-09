@@ -878,9 +878,9 @@ const MusicPlayer = React.memo(function MusicPlayer({ settings, patch, spotifySr
     // ----- radio engine: one audio element, tracks advance in order and loop -----
     useEffect(() => {
         const a = new Audio();
-        a.preload = 'auto';
+        a.preload = 'none'; // no track bytes are fetched until the user actually plays the radio
         audioRef.current = a;
-        const onTime = () => setElapsed(a.currentTime || 0);
+        const onTime = () => { const t = a.currentTime || 0; setElapsed((prev) => (Math.floor(prev) === Math.floor(t) ? prev : t)); };
         const onEnded = () => { errCountRef.current = 0; setStatus(''); patch({ radio: { ...radioRef.current, index: (radioRef.current.index + 1) % RADIO_TRACKS.length, playing: true } }); };
         const onErr = () => {
             if (!audioRef.current || audioRef.current.dataset.track !== track.id) return;
@@ -899,18 +899,20 @@ const MusicPlayer = React.memo(function MusicPlayer({ settings, patch, spotifySr
         return () => { a.pause(); a.removeEventListener('timeupdate', onTime); a.removeEventListener('ended', onEnded); a.removeEventListener('error', onErr); audioRef.current = null; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
-    // load the selected track
+    // load the selected track - lazily, only once the radio has actually been played
     useEffect(() => {
         const a = audioRef.current;
         if (!a) return;
-        if (a.dataset.track !== track.id) {
+        const wanted = mode === 'radio' && radio.playing;
+        if (a.dataset.track !== track.id && (wanted || a.dataset.track)) {
             a.dataset.track = track.id;
             a.src = track.url;
+            a.preload = 'auto';
             errCountRef.current = 0;
             setElapsed(0);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [track.id]);
+    }, [track.id, mode, radio.playing]);
     // play / pause / volume
     useEffect(() => {
         const a = audioRef.current;
@@ -961,7 +963,9 @@ const MusicPlayer = React.memo(function MusicPlayer({ settings, patch, spotifySr
                 <button type="button" className="ft-player-play is-small" aria-label={radio.playing ? 'Pause radio' : 'Play radio'} onClick={() => patch({ radio: { ...radio, playing: !radio.playing } })}>{radio.playing ? '❚❚' : '▶'}</button>
                 <span className="ft-player-mintitle">{track.title}</span>
             </> : <span className="ft-player-mintitle">Spotify player</span>}
-        </div> : mode === 'radio' ? <div className="ft-player-body">
+        </div> : null}
+        {/* The body stays mounted while minimized (hidden with CSS) so minimizing never stops the music or reloads the Spotify player. */}
+        {mode === 'radio' ? <div className="ft-player-body">
             <span className="ft-player-row">
                 <img className="ft-player-cover" src={track.cover} alt="" loading="lazy" decoding="async" />
                 <span className="ft-player-meta">
@@ -1704,6 +1708,8 @@ function MainApp() {
     const showSettingsPanel = panel === 'settings';
     const toggleTasks = useCallback(() => setPanel((p) => (p === 'tasks' ? 'none' : 'tasks')), []);
     const toggleSettings = useCallback(() => setPanel((p) => (p === 'settings' ? 'none' : 'settings')), []);
+    // Stable identity so the memoized MusicPlayer does not re-render on every timer tick.
+    const openSettingsPanel = useCallback(() => setPanel('settings'), []);
     const toggleProfile = useCallback(() => setPanel((p) => (p === 'profile' ? 'none' : 'profile')), []);
 
     // keyboard shortcuts
@@ -1872,6 +1878,6 @@ function MainApp() {
             </div>
         </div>, pipWin.document.body) : null}
 
-        {settings.musicOpen !== false ? <MusicPlayer settings={settings} patch={patch} spotifySrc={spotifySrc} onOpenSettings={() => setPanel('settings')} /> : null}
+        {settings.musicOpen !== false ? <MusicPlayer settings={settings} patch={patch} spotifySrc={spotifySrc} onOpenSettings={openSettingsPanel} /> : null}
     </div>;
-    }
+        }
