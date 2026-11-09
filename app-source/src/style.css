@@ -250,7 +250,8 @@ body { background: #101418; }
 .pf-linkbtn { background: none; border: 0; color: var(--ft-accent, #9fd8c6); cursor: pointer; font-size: inherit; font-family: inherit; text-decoration: underline; padding: 0; }
 
 /* Scene switching indicator: shown while a new scene's first frame is on the way */
-.ft-scene-switching { position: fixed; left: 50%; bottom: 92px; z-index: 3; transform: translateX(-50%); pointer-events: none; }
+.ft-scene-switching { position: fixed; right: 20px; top: 76px; z-index: 3; pointer-events: none; }
+.ft-scene-error { position: fixed; left: 20px; right: 20px; top: 76px; z-index: 3; text-align: center; font-size: 13px; padding: 10px; background: #101418e8; border-radius: 8px; }
 .ft-scene-switching i { display: block; width: 20px; height: 20px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.25); border-top-color: rgba(255,255,255,0.9); animation: ft-spin 0.8s linear infinite; }
 @keyframes ft-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .ft-scene-switching i { animation: none; border-top-color: rgba(255,255,255,0.5); } }
