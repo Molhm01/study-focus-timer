@@ -2,10 +2,13 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Avatar } from './Avatar';
 import {
     ACCESSORIES, ACHIEVEMENTS, AVATAR_BASES, Slot, fmtDuration,
-    isUnlocked, nextUnlocks, titleForLevel,
+    isUnlocked, nextUnlocks, titleForLevel, todayKey,
 } from './engine';
-import { useProgression, readStudyingNow, syncLedgerFromStorage } from './useProgression';
+import { QuestProgress } from './quests';
+import { useProgression, readStudyingNow, syncLedgerFromStorage, alertCount } from './useProgression';
 import { backendEnabled, useCloudAuth, usePresence, pullCloudProfile, pushCloudProfile } from './backend';
+import { Confetti, XpFloater } from './Celebration';
+import { WeeklyChart } from './WeeklyChart';
 
 // Always-mounted beacon that keeps this visitor's anonymous presence flag
 // (studying / not studying) up to date. Renders nothing. Entirely inert
@@ -26,12 +29,30 @@ export function PresenceBeacon() {
     return null;
 }
 
+// Topbar alert dot: shown on the Profile button while there is something to
+// collect (a completed daily quest or a new achievement). Polls storage on a
+// slow cadence; renders nothing when all is collected.
+export function ProfileAlert() {
+    const [count, setCount] = useState(0);
+    useEffect(() => {
+        const update = () => setCount(alertCount());
+        update();
+        const iv = window.setInterval(update, 15000);
+        window.addEventListener('sft:progress', update);
+        window.addEventListener('focus', update);
+        return () => { window.clearInterval(iv); window.removeEventListener('sft:progress', update); window.removeEventListener('focus', update); };
+    }, []);
+    return count > 0 ? <span className="pf-dot" aria-label={`${count} progression reward${count === 1 ? '' : 's'} to collect`} /> : null;
+}
+
 const SLOTS: { slot: Slot; label: string }[] = [
     { slot: 'hat', label: 'Hat' },
     { slot: 'eyes', label: 'Eyewear' },
     { slot: 'aura', label: 'Aura' },
     { slot: 'frame', label: 'Frame' },
 ];
+
+interface Float { id: number; amount: number; label?: string }
 
 export const ProfilePanel = React.memo(function ProfilePanel({ onClose }: { onClose: () => void }) {
     const prog = useProgression(true);
@@ -84,10 +105,34 @@ export const ProfilePanel = React.memo(function ProfilePanel({ onClose }: { onCl
 
     const level = levelInfo.level;
     const title = titleForLevel(level);
-    const unlockedAchievements = useMemo(() => ACHIEVEMENTS.filter((a) => a.unlocked(snapshot)), [snapshot]);
+    const unlockedAchievements = useMemo(() => ACHIEVEMENTS.filter((a) => a.unlocked(snapshot, prog.achCtx)), [snapshot, prog.achCtx]);
     const newAchievements = unlockedAchievements.filter((a) => !meta.seenAchievements.includes(a.id));
     const leveledUp = level > meta.celebratedLevel;
     const upcoming = nextUnlocks(level);
+
+    // ---------- celebration state ----------
+    const [confettiOn, setConfettiOn] = useState(false);
+    const [floats, setFloats] = useState<Float[]>([]);
+    const prevXp = useRef<number | null>(null);
+    useEffect(() => {
+        if (prevXp.current !== null && prog.xpTotal > prevXp.current) {
+            const gain = prog.xpTotal - prevXp.current;
+            const id = Date.now() + Math.random();
+            setFloats((f) => [...f, { id, amount: gain }]);
+            window.setTimeout(() => setFloats((f) => f.filter((x) => x.id !== id)), 1700);
+        }
+        prevXp.current = prog.xpTotal;
+    }, [prog.xpTotal]);
+    useEffect(() => {
+        if (!leveledUp) return;
+        setConfettiOn(true);
+        const t = window.setTimeout(() => setConfettiOn(false), 2600);
+        return () => window.clearTimeout(t);
+    }, [leveledUp]);
+
+    // Claiming routes through prog.claimQuest -> xpTotal rises -> the delta
+    // effect above floats "+N XP" (single floater, no duplicates).
+    const claim = (q: QuestProgress) => { prog.claimQuest(q.id); };
 
     const commitName = () => {
         const name = nameDraft.trim().slice(0, 24);
@@ -96,8 +141,20 @@ export const ProfilePanel = React.memo(function ProfilePanel({ onClose }: { onCl
     };
 
     const displayName = profile.name || 'Guest scholar';
+    const todaySessions = prog.statsDays[todayKey()]?.sessions || 0;
+
+    // Speech bubble: one contextual line, priority ordered.
+    const bubble = (() => {
+        if (prog.claimableCount > 0) return `${prog.claimableCount} quest${prog.claimableCount === 1 ? '' : 's'} ready to claim!`;
+        if (leveledUp) return `Level ${level}! You are now ${title}.`;
+        if (snapshot.currentStreak >= 2 && todaySessions === 0) return `Study today to keep your ${snapshot.currentStreak}-day streak.`;
+        if (upcoming.length > 0) return `${levelInfo.needed - levelInfo.intoLevel} XP to ${upcoming[0].name} at level ${upcoming[0].level}.`;
+        return 'Every focus minute earns 2 XP. Quests earn bonus XP.';
+    })();
 
     return <aside className="ft-sheet pf-sheet" aria-label="Profile and progress">
+        {confettiOn ? <Confetti /> : null}
+        {floats.map((f) => <XpFloater key={f.id} amount={f.amount} label={f.label} />)}
         <div className="ft-sheet-head">
             <h2>Profile</h2>
             <button type="button" className="ft-sheet-close" aria-label="Close profile" onClick={onClose}>×</button>
@@ -126,10 +183,13 @@ export const ProfilePanel = React.memo(function ProfilePanel({ onClose }: { onCl
             <span className="pf-level-badge" title={`Level ${level}`}>Lv {level}</span>
         </div>
 
+        <div className="pf-bubble" role="status">{bubble}</div>
+
         <div className="pf-xpwrap" role="img" aria-label={`Level ${level}, ${levelInfo.intoLevel} of ${levelInfo.needed} experience toward level ${level + 1}`}>
             <div className="pf-xpbar"><span style={{ width: `${Math.round(levelInfo.progress * 100)}%` }} /></div>
             <span className="pf-xpnum">{levelInfo.intoLevel} / {levelInfo.needed} XP</span>
         </div>
+        {prog.bonusXp > 0 ? <p className="ft-field-hint pf-bonus-note">{prog.xpTotal} XP total, including {prog.bonusXp} bonus XP from quests.</p> : null}
 
         {leveledUp ? <div className="pf-banner" role="status">
             Level {level} reached - {title}!{upcoming.length === 0 ? '' : ' New gear below.'}
@@ -139,6 +199,28 @@ export const ProfilePanel = React.memo(function ProfilePanel({ onClose }: { onCl
             Unlocked: {newAchievements.map((a) => a.name).join(', ')}
             <button type="button" className="ft-primary is-compact" onClick={() => prog.markAchievementsSeen(newAchievements.map((a) => a.id))}>Nice</button>
         </div> : null}
+
+        <h3>Daily quests</h3>
+        <div className="pf-quests">
+            {prog.quests.map((q) => <div key={q.id} className={`pf-quest ${q.claimed ? 'is-claimed' : ''} ${q.done && !q.claimed ? 'is-done' : ''}`}>
+                <div className="pf-quest-body">
+                    <strong>{q.name}</strong>
+                    <span className="pf-quest-prog">
+                        <span className="pf-quest-bar"><span style={{ width: `${Math.round((q.progress / q.target) * 100)}%` }} /></span>
+                        <span className="pf-quest-num">{q.progress}/{q.target}{q.unit ? ` ${q.unit}` : ''}</span>
+                    </span>
+                </div>
+                {q.claimed
+                    ? <span className="pf-quest-claimed">✓ +{q.xp}</span>
+                    : q.done
+                        ? <button type="button" className="ft-primary is-compact" aria-label={`Claim ${q.xp} XP for ${q.name}`} onClick={() => claim(q)}>+{q.xp} XP</button>
+                        : <span className="pf-quest-xp">+{q.xp} XP</span>}
+            </div>)}
+        </div>
+        <p className="ft-field-hint">Three new quests every day. Claimed quest XP is yours to keep.</p>
+
+        <h3>This week</h3>
+        <WeeklyChart days={prog.statsDays} />
 
         <h3>Your stats</h3>
         <div className="pf-stats">
@@ -180,10 +262,16 @@ export const ProfilePanel = React.memo(function ProfilePanel({ onClose }: { onCl
         <h3>Achievements</h3>
         <ul className="pf-achievements">
             {ACHIEVEMENTS.map((a) => {
-                const got = a.unlocked(snapshot);
+                const got = a.unlocked(snapshot, prog.achCtx);
+                const prog_ = !got && a.target && a.progress ? Math.min(a.progress(snapshot, prog.achCtx), a.target) : null;
                 return <li key={a.id} className={got ? 'is-got' : ''}>
                     <span className="pf-ach-check" aria-hidden="true">{got ? '★' : '☆'}</span>
-                    <span className="pf-ach-body"><strong>{a.name}</strong><span>{a.desc}</span></span>
+                    <span className="pf-ach-body"><strong>{a.name}</strong><span>{a.desc}</span>
+                        {prog_ !== null ? <span className="pf-ach-prog">
+                            <span className="pf-quest-bar"><span style={{ width: `${Math.round((prog_ / (a.target || 1)) * 100)}%` }} /></span>
+                            <span className="pf-quest-num">{prog_}/{a.target}</span>
+                        </span> : null}
+                    </span>
                 </li>;
             })}
         </ul>
