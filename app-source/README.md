@@ -33,6 +33,29 @@ Scene sources (Pixabay Content License):
 - Sleeping dog desk: https://pixabay.com/videos/anime-lofi-dog-cute-dog-345838/
 - Night reading: https://pixabay.com/videos/anime-lofi-girl-anime-girl-reading-345955/
 
+## Focus radio
+
+The mini music player defaults to Focus radio: eight instrumental lofi tracks that stream directly from Pixabay's CDN only while playing, under the Pixabay Content License (https://pixabay.com/service/license-summary/) - free to use without attribution. Free-to-use is not public domain; the authors keep their copyright. No audio files are hosted in this repository. Browsers block audio autoplay before the first tap on the page, so radio playback starts from the play button or resumes on the first tap after a reload. The player shows the current track's title, artist and cover; the tracks are instrumentals, so there are no lyrics to display.
+
+Track sources:
+
+- Chillhop Jazz Coffee Shop - alex-morgan: https://pixabay.com/music/lofi-chillhop-jazz-coffee-shop-552792/
+- Lofi - Sub_Clair: https://pixabay.com/music/lofi-lofi-586095/
+- LoFi Relax - Kulakovka: https://pixabay.com/music/lofi-lofi-relax-570489/
+- Lofi - APALONBeats: https://pixabay.com/music/lofi-lofi-576261/
+- LoFi Music - MondaMusic: https://pixabay.com/music/lofi-lofi-lofi-music-589107/
+- Chill Lofi - ZephiraMusic: https://pixabay.com/music/lofi-chill-lofi-585360/
+- Lofi Coffee Shop - alex-morgan: https://pixabay.com/music/lofi-lofi-coffee-shop-568150/
+- Lofi Midnight Club - alex-morgan: https://pixabay.com/music/lofi-lofi-midnight-club-568164/
+
+## Music player and Spotify
+
+The mini player can be dragged anywhere by its top bar; its position is remembered on that device. Spotify mode embeds Spotify's official player, which shows album art and playback controls; Spotify decides what plays (full songs when signed in to Spotify inside the player, 30-second previews when signed out). Showing the live current song or synced lyrics is not supported through an embedded player - Spotify exposes that only to apps connected to a Spotify account, which this site does not use.
+
+## Saved backgrounds, solid colors and the color wheel
+
+Image and video links pasted in Settings are saved under My saved backgrounds and reload on each visit (stored in that browser only); each can be re-applied or forgotten independently. Solid color backgrounds are picked from presets or a color wheel (hue/saturation wheel with a lightness slider); light colors are dimmed behind the timer automatically so the clock stays readable. The old gradient and CSS-animated background presets were removed; saved picks migrate once to the closest solid color or the default photo.
+
 ## Photos
 
 Eight replacement photos are native 1920px wide. CSS uses centered cover crops without blur-fill. A high-density or large display can exceed that resolution; this does not promise that every screen ratio has an exact native matching crop. These specific items are CC0 under Pixabay terms section4 because each Published date is before January9,2019. Main-image downloads were paired to the exact image external-id, not by independently ordered search arrays.
