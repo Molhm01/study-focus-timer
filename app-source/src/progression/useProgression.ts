@@ -327,4 +327,4 @@ export function useProgression(active: boolean): Progression {
         celebrateLevel,
         storageMessage,
     };
-            }
+}
