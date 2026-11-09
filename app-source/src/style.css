@@ -197,6 +197,7 @@ body { background: #101418; }
     .ft-hint { display: none; }
     .ft-player { left: 8px; bottom: max(8px, env(safe-area-inset-bottom)); width: min(330px, calc(100% - 16px)); }
     .ft-root:has(.ft-player:not(.is-mini)) .ft-center:not(.is-clockonly) { padding-bottom: 185px; }
+    .ft-root:has(.ft-player:not(.is-mini)) .ft-sheet { padding-bottom: 185px; }
 }
 
 .ft-bgswatch-name { position: absolute; left: 6px; right: 6px; bottom: 5px; font-size: 10.5px; line-height: 1.2; color: #fff; text-align: left; text-shadow: 0 1px 3px rgba(0,0,0,.85), 0 0 6px rgba(0,0,0,.6); pointer-events: none; }
