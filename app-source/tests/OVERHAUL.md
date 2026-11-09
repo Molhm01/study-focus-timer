@@ -103,3 +103,6 @@ NEXT: deploy remaining 4 files + OVERHAUL.md, then live verification (Mj profile
 All 20 files deployed via GitHub web editor and sha256-verified against local bytes (raw fetch with cache-buster). Commits on main.
 Live verification at https://molhm01.github.io/study-focus-timer/ (cache-busted): boots to new bundle; Mj's state fully preserved - Serif font, Night reading scene (lofi-345955) animating, paused short break at 05:00 ("Rest up"), accent #ffcf99, radio player on Chillhop Jazz Coffee Shop. manifest.webmanifest serves 200. Screenshot evidence: /downloads/cloud-browser-20261109-072647.png.
 Local repo synced to deployed bytes for all files (editor final-line whitespace normalization adopted).
+
+## Defect fix (~02:32 EST)
+Parent review caught: expanded music player overlayed sheet-bottom content on mobile (settings clock-only text/toggles unreachable). Fix: `@media (max-width:600px) .ft-root:has(.ft-player:not(.is-mini)) .ft-sheet { padding-bottom: 185px }` - playback keeps running, saved player position untouched. Measured on build: settings/tasks/profile sheet bottoms all clear player (content bottom 647 vs player top 673). Full regression green. Deployed as index-FgLpsPWE.js / index-BoitPCpt.css + index.html + style.css source.
