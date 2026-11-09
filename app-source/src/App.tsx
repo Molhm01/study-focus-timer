@@ -589,14 +589,20 @@ const SceneStage = React.memo(function SceneStage({ scene, paused, animate }: { 
     const [readyId, setReadyId] = useState<string | null>(null);
     const firstStill = useImageUrl('rain');
     const currentId = useRef(scene.id);
+    const readyIdRef = useRef<string | null>(null);
     useEffect(() => {
         currentId.current = scene.id;
         setStack((prev) => (prev.length && prev[prev.length - 1].id === scene.id) ? prev : [...prev.filter((s) => s.id !== scene.id).slice(-1), scene]);
+        // When the newly picked scene is already decoded (no new "ready" event will fire), the ready-path
+        // cleanup never runs - drop the older stage here so it cannot linger playing behind the current one.
+        const id = scene.id;
+        window.setTimeout(() => { if (currentId.current === id && readyIdRef.current === id) setStack((prev) => prev.filter((x) => x.id === id)); }, 400);
     }, [scene]);
     const handleReady = useCallback((s: SceneDef) => {
         // A scene that is no longer selected must never shrink the stack: its late "ready" would otherwise
         // filter the stack down to a scene that is no longer in it, emptying the stage until reload.
         if (s.id !== currentId.current) return;
+        readyIdRef.current = s.id;
         setReadyId(s.id);
         window.setTimeout(() => { if (currentId.current === s.id) setStack((prev) => prev.filter((x) => x.id === s.id)); }, 400);
     }, []);
