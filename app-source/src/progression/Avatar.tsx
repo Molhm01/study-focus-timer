@@ -103,6 +103,33 @@ function BaseLayer({ base }: { base: string }) {
                 <circle cx="33" cy="57" r="3" fill="#d3b8f5" opacity="0.8" />
                 <circle cx="64" cy="57" r="3" fill="#d3b8f5" opacity="0.8" />
             </g>;
+        case 'penguin':
+            return <g>
+                <ellipse cx="48" cy="52" rx="26" ry="28" fill="#233248" />
+                <ellipse cx="48" cy="58" rx="16" ry="18" fill="#f4f6f8" />
+                <circle cx="38" cy="42" r="3.4" fill="#fff" />
+                <circle cx="58" cy="42" r="3.4" fill="#fff" />
+                <circle cx="38" cy="42" r="1.7" fill="#101418" />
+                <circle cx="58" cy="42" r="1.7" fill="#101418" />
+                <polygon points="44,48 52,48 48,55" fill="#f2a03d" />
+                <ellipse cx="36" cy="79" rx="7" ry="3.4" fill="#f2a03d" />
+                <ellipse cx="60" cy="79" rx="7" ry="3.4" fill="#f2a03d" />
+                <ellipse cx="22" cy="54" rx="5" ry="12" fill="#1b2839" transform="rotate(14 22 54)" />
+                <ellipse cx="74" cy="54" rx="5" ry="12" fill="#1b2839" transform="rotate(-14 74 54)" />
+            </g>;
+        case 'frog':
+            return <g>
+                <circle cx="34" cy="26" r="10" fill="#6aa84f" />
+                <circle cx="62" cy="26" r="10" fill="#6aa84f" />
+                <circle cx="34" cy="26" r="6" fill="#fff" />
+                <circle cx="62" cy="26" r="6" fill="#fff" />
+                <circle cx="34" cy="27" r="3" fill="#22301c" />
+                <circle cx="62" cy="27" r="3" fill="#22301c" />
+                <circle cx="48" cy="54" r="26" fill="#7fb069" />
+                <path d="M32 56 q16 12 32 0" stroke="#3c5527" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+                <circle cx="30" cy="50" r="3.4" fill="#a8d08d" opacity="0.9" />
+                <circle cx="66" cy="50" r="3.4" fill="#a8d08d" opacity="0.9" />
+            </g>;
         case 'moon':
         default:
             return <g>
@@ -122,6 +149,12 @@ function AuraLayer({ aura }: { aura: string }) {
                 <Star x={82} y={18} r={3.2} fill="#ffe9a8" />
                 <Star x={86} y={66} r={4} fill="#ffe9a8" />
                 <Star x={12} y={72} r={3} fill="#ffe9a8" />
+            </g>;
+        case 'rainbow':
+            return <g fill="none" strokeLinecap="round">
+                <path d="M14 60 A36 36 0 0 1 82 60" stroke="#ff6b6b" strokeWidth="2.6" opacity="0.85" />
+                <path d="M19 62 A31 31 0 0 1 77 62" stroke="#ffd166" strokeWidth="2.6" opacity="0.85" />
+                <path d="M24 64 A26 26 0 0 1 72 64" stroke="#6fe3a5" strokeWidth="2.6" opacity="0.85" />
             </g>;
         case 'calm-ring':
             return <circle cx="48" cy="48" r="42" fill="none" stroke="#9fd8c6" strokeWidth="2" strokeDasharray="4 7" opacity="0.9" />;
@@ -157,6 +190,11 @@ function EyesLayer({ eyes }: { eyes: string }) {
                 <rect x="29" y="41" width="17" height="11" rx="4" fill="#15181f" />
                 <rect x="50" y="41" width="17" height="11" rx="4" fill="#15181f" />
                 <rect x="44" y="44" width="8" height="3" rx="1.5" fill="#15181f" />
+            </g>;
+        case 'hearts':
+            return <g fill="#ff6b8a">
+                <path d="M38 53 c-5 -4 -9 -7 -9 -11 a5 5 0 0 1 9 -3 a5 5 0 0 1 9 3 c0 4 -4 7 -9 11 z" />
+                <path d="M58 53 c-5 -4 -9 -7 -9 -11 a5 5 0 0 1 9 -3 a5 5 0 0 1 9 3 c0 4 -4 7 -9 11 z" />
             </g>;
         case 'monocle':
             return <g fill="none" stroke="#ffd97a" strokeWidth="2">
@@ -202,6 +240,19 @@ function HatLayer({ hat }: { hat: string }) {
                 <ellipse cx="48" cy="34" rx="27" ry="5.4" fill="#4a3d75" />
                 <Star x={44} y={22} r={2.6} fill="#ffe08a" />
             </g>;
+        case 'gradcap':
+            return <g>
+                <polygon points="48,6 86,20 48,34 10,20" fill="#2b3245" stroke="#1c2233" strokeWidth="1.4" strokeLinejoin="round" />
+                <path d="M34 26 v10 q14 8 28 0 v-10" fill="#2b3245" />
+                <line x1="82" y1="22" x2="82" y2="38" stroke="#ffd166" strokeWidth="2.2" strokeLinecap="round" />
+                <circle cx="82" cy="41" r="3" fill="#ffd166" />
+            </g>;
+        case 'astro':
+            return <g>
+                <circle cx="48" cy="48" r="36" fill="rgba(200,230,255,0.14)" stroke="#e8eef4" strokeWidth="4" />
+                <path d="M24 34 a30 30 0 0 1 20 -12" fill="none" stroke="#fff" strokeWidth="3" opacity="0.7" strokeLinecap="round" />
+                <rect x="40" y="82" width="16" height="7" rx="3" fill="#c7d2dc" />
+            </g>;
         case 'laurel':
             return <g fill="none" stroke="#7fb069" strokeWidth="3" strokeLinecap="round">
                 <path d="M26 36 q6 -16 22 -20" />
@@ -214,6 +265,16 @@ function HatLayer({ hat }: { hat: string }) {
 }
 
 function FrameLayer({ frame }: { frame: string }) {
+    if (frame === 'frame-rainbow') {
+        return <g fill="none" strokeWidth="3" strokeLinecap="round">
+            <path d="M48 3 A45 45 0 0 1 87 26" stroke="#ff6b6b" />
+            <path d="M87 26 A45 45 0 0 1 87 70" stroke="#ffd166" />
+            <path d="M87 70 A45 45 0 0 1 48 93" stroke="#6fe3a5" />
+            <path d="M48 93 A45 45 0 0 1 9 70" stroke="#7fb6ff" />
+            <path d="M9 70 A45 45 0 0 1 9 26" stroke="#c39bff" />
+            <path d="M9 26 A45 45 0 0 1 48 3" stroke="#ff9ff3" />
+        </g>;
+    }
     const color = FRAME_COLORS[frame];
     if (!color) return null;
     return <g>
