@@ -558,6 +558,10 @@ const SceneVideo = React.memo(function SceneVideo({ scene, token, paused, animat
     const src = ladder[Math.min(attempt, ladder.length - 1)];
     const control = useRef({ paused, animate }); control.current = { paused, animate };
     const cb = useRef({ onReady, onFail }); cb.current = { onReady, onFail };
+    const syncRef = useRef<(() => void) | null>(null);
+    // Pause/resume promptly when the animate setting or compact pause changes - waiting for
+    // the next pointerdown or visibility change left the video playing after "Animate off".
+    useEffect(() => { syncRef.current?.(); }, [paused, animate]);
     useEffect(() => {
         setError(false);
         const stage = root.current;
@@ -596,6 +600,7 @@ const SceneVideo = React.memo(function SceneVideo({ scene, token, paused, animat
             if (!runWanted()) { a?.pause(); b?.pause(); }
             else if (started && a) { play(a); if (b) play(b); }
         };
+        syncRef.current = sync;
         const paint = () => {
             if (dead || !a) return;
             if (!started && a.readyState >= 2) { started = true; if (root.current) root.current.style.opacity = '1'; cb.current.onReady(token); if (runWanted()) play(a); }
@@ -603,7 +608,7 @@ const SceneVideo = React.memo(function SceneVideo({ scene, token, paused, animat
                 if (a.paused && !a.ended) play(a);
                 const end = scene.duration || a.duration;
                 const d = Math.min(1.5, end / 4);
-                if (!scene.blend) { raf = requestAnimationFrame(paint); return; }
+                if (!scene.blend) return; // hard-loop scenes need no per-frame work once started
                 if (!blending && Number.isFinite(end) && a.currentTime >= end - d) {
                     blending = true;
                     b = makeVideo(); b.style.opacity = '0'; b.style.zIndex = '2';
@@ -624,13 +629,13 @@ const SceneVideo = React.memo(function SceneVideo({ scene, token, paused, animat
                     }
                 }
             }
-            raf = requestAnimationFrame(paint);
+            if (scene.blend || !started) raf = requestAnimationFrame(paint);
         };
         raf = requestAnimationFrame(paint);
         document.addEventListener('visibilitychange', sync);
         window.addEventListener('pointerdown', sync);
         return () => {
-            dead = true; cancelAnimationFrame(raf);
+            dead = true; cancelAnimationFrame(raf); syncRef.current = null;
             a?.pause(); b?.pause(); a?.remove(); b?.remove();
             document.removeEventListener('visibilitychange', sync);
             window.removeEventListener('pointerdown', sync);
@@ -1058,7 +1063,15 @@ const TasksSheet = React.memo(function TasksSheet({ tasksState, setTasksState, w
 }) {
     const [newTask, setNewTask] = useState('');
     const [newEst, setNewEst] = useState(1);
+    const [editId, setEditId] = useState<string | null>(null);
+    const [editText, setEditText] = useState('');
     const tasks = tasksState.tasks;
+    const commitEdit = (id: string) => {
+        const title = editText.trim();
+        setEditId(null);
+        if (!title) return;
+        setTasksState((prev) => ({ ...prev, tasks: prev.tasks.map((x) => (x.id === id ? { ...x, title } : x)) }));
+    };
     const weekMax = Math.max(1, ...week.map((w) => w.minutes));
     const addTask = () => {
         const title = newTask.trim();
@@ -1082,8 +1095,11 @@ const TasksSheet = React.memo(function TasksSheet({ tasksState, setTasksState, w
         <ul className="ft-tasklist">
             {tasks.map((t) => <li key={t.id} className={`${t.id === tasksState.activeId ? 'is-active' : ''} ${t.completed ? 'is-done' : ''}`}>
                 <button type="button" className="ft-taskcheck" aria-label={t.completed ? 'Mark not done' : 'Mark done'} onClick={() => { if (!t.completed) recordTaskCompletion(t.id); setTasksState((prev) => ({ ...prev, tasks: prev.tasks.map((x) => x.id === t.id ? { ...x, completed: !x.completed } : x) })); }}>{t.completed ? '✓' : ''}</button>
-                <button type="button" className="ft-taskname" onClick={() => setTasksState((prev) => ({ ...prev, activeId: t.id }))}>{t.title}</button>
+                {editId === t.id
+                    ? <input className="ft-taskedit" aria-label={`Rename task ${t.title}`} value={editText} autoFocus maxLength={120} onChange={(e) => setEditText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') commitEdit(t.id); if (e.key === 'Escape') setEditId(null); }} onBlur={() => commitEdit(t.id)} />
+                    : <button type="button" className="ft-taskname" onClick={() => setTasksState((prev) => ({ ...prev, activeId: t.id }))}>{t.title}</button>}
                 <span className="ft-taskcount">{t.done}/{t.est}</span>
+                <button type="button" className="ft-taskeditbtn" aria-label={`Rename ${t.title}`} onClick={() => { setEditId(t.id); setEditText(t.title); }}>✎</button>
                 <button type="button" className="ft-taskdel" aria-label={`Delete ${t.title}`} onClick={() => setTasksState((prev) => ({ tasks: prev.tasks.filter((x) => x.id !== t.id), activeId: prev.activeId === t.id ? null : prev.activeId }))}>×</button>
             </li>)}
         </ul>
@@ -1396,6 +1412,7 @@ function MainApp() {
     const [cycleCount, setCycleCount] = useState(0);
     const [panel, setPanel] = useState<'none' | 'tasks' | 'settings' | 'profile'>('none');
     const [compact, setCompact] = useState(false);
+    const [awayNote, setAwayNote] = useState('');
     const endAtRef = useRef(0);
     const runningRef = useRef(false);
     runningRef.current = running;
@@ -1554,7 +1571,7 @@ function MainApp() {
     }, [sessionSaved.ready]);
 
     useEffect(() => {
-        if (!sessionSaved.ready || !settingsSaved.ready || sessionRestoredRef.current) return;
+        if (!sessionSaved.ready || !settingsSaved.ready || !statsSaved.ready || !tasksSaved.ready || sessionRestoredRef.current) return;
         sessionRestoredRef.current = true;
         if (!session) return;
         const p: Phase = session.phase === 'short' || session.phase === 'long' ? session.phase : 'focus';
@@ -1565,8 +1582,24 @@ function MainApp() {
             setRemaining(session.endAt - Date.now());
             setRunning(true);
         } else if (session.running) {
-            setRemaining(durationsRef.current[p]);
+            // The session ended while the tab was closed. Count the finished phase exactly
+            // once (into the day it ended), advance the cycle, and park on the next phase,
+            // stopped - never invent further unattended cycles.
+            let next: Phase = 'focus';
+            let newCycle = session.cycleCount || 0;
+            if (p === 'focus') {
+                newCycle += 1;
+                next = newCycle % Math.max(1, settings.longEvery) === 0 && newCycle > 0 ? 'long' : 'short';
+                const key = todayKey(new Date(session.endAt));
+                setStats((prev) => { const day = prev.days[key] || { focusSec: 0, sessions: 0 }; return { days: { ...prev.days, [key]: { focusSec: day.focusSec + Math.round(durationsRef.current.focus / 1000), sessions: day.sessions + 1 } } }; });
+                setTasksState((prev) => (prev.activeId ? { ...prev, tasks: prev.tasks.map((t) => (t.id === prev.activeId ? { ...t, done: t.done + 1 } : t)) } : prev));
+            }
+            setCycleCount(newCycle);
+            setPhase(next);
+            setRemaining(durationsRef.current[next]);
             setRunning(false);
+            setAwayNote(`Your ${PHASE_LABEL[p].toLowerCase()} ended while you were away.`);
+            persistSession({ phase: next, running: false, remainingMs: durationsRef.current[next], cycleCount: newCycle });
         } else {
             const left = typeof session.remainingMs === 'number' && session.remainingMs > 0 ? Math.min(session.remainingMs, durationsRef.current[p]) : durationsRef.current[p];
             setRemaining(left);
@@ -1626,17 +1659,36 @@ function MainApp() {
     completePhaseRef.current = completePhase;
 
     // Tick: only re-render when the displayed second actually changes (was: 5 renders/sec on every device).
+    // A Web Worker keeps the cadence in hidden tabs (page timers get throttled there; a worker
+    // does not), so a running session still completes on time while the tab is alive. Falls back
+    // to a page interval where workers are unavailable. This is elapsed-time accuracy, not an OS
+    // alarm: a suspended or closed browser cannot tick, and that time is recovered on next visit.
+    const timerWorkerRef = useRef<Worker | null | undefined>(undefined);
     useEffect(() => {
         if (!running) return;
-        const iv = window.setInterval(() => {
+        const onTick = () => {
             const left = endAtRef.current - Date.now();
             if (left <= 0) {
                 completePhaseRef.current(false);
             } else {
                 setRemaining((prev) => (Math.ceil(prev / 1000) !== Math.ceil(left / 1000) ? left : prev));
             }
-        }, 250);
+        };
+        if (timerWorkerRef.current === undefined) {
+            try { timerWorkerRef.current = typeof Worker !== 'undefined' ? new Worker(new URL('./timerWorker.ts', import.meta.url)) : null; }
+            catch { timerWorkerRef.current = null; }
+        }
+        const w = timerWorkerRef.current;
+        if (w) {
+            const listener = () => onTick();
+            w.addEventListener('message', listener);
+            w.postMessage('start');
+            onTick();
+            return () => { w.removeEventListener('message', listener); w.postMessage('stop'); };
+        }
+        const iv = window.setInterval(onTick, 250);
         return () => window.clearInterval(iv);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [running]);
 
     // keep display in sync when durations are edited while idle (phase switches preserve progress instead).
@@ -1715,6 +1767,7 @@ function MainApp() {
     const pauseRef = useRef(() => {});
     const resetFnRef = useRef(() => {});
     const start = useCallback(() => {
+        setAwayNote('');
         audioCtx();
         if (customAudioRef.current) { try { customAudioRef.current.pause(); customAudioRef.current.currentTime = 0; } catch { /* ignore */ } }
         endAtRef.current = Date.now() + remainingRef.current;
@@ -1722,7 +1775,7 @@ function MainApp() {
         persistSession({ phase: phaseRef.current, running: true, endAt: endAtRef.current, remainingMs: remainingRef.current, cycleCount });
     }, [persistSession, cycleCount]);
     const pause = useCallback(() => { setRunning(false); persistSession({ phase: phaseRef.current, running: false, remainingMs: remainingRef.current, cycleCount }); }, [persistSession, cycleCount]);
-    const reset = useCallback(() => { delete phaseStashRef.current[phaseRef.current]; setRunning(false); setRemaining(durationsRef.current[phaseRef.current]); persistSession({ phase: phaseRef.current, running: false, remainingMs: durationsRef.current[phaseRef.current], cycleCount }); }, [persistSession, cycleCount]);
+    const reset = useCallback(() => { setAwayNote(''); delete phaseStashRef.current[phaseRef.current]; setRunning(false); setRemaining(durationsRef.current[phaseRef.current]); persistSession({ phase: phaseRef.current, running: false, remainingMs: durationsRef.current[phaseRef.current], cycleCount }); }, [persistSession, cycleCount]);
     const skip = useCallback(() => { completePhaseRef.current(true); }, []);
     startRef.current = start;
     pauseRef.current = pause;
@@ -1808,6 +1861,7 @@ function MainApp() {
             const tag = (e.target as HTMLElement)?.tagName;
             if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
             if (e.code === 'Space') { e.preventDefault(); if (runningRef.current) pause(); else start(); }
+            else if (e.key === 'Escape') setPanel('none');
             else if (e.key === 'r' || e.key === 'R') reset();
             else if (e.key === 's' || e.key === 'S') skip();
             else if (e.key === '1') switchPhase('focus');
@@ -1937,7 +1991,8 @@ function MainApp() {
                 <button type="button" className="ft-ghost" onClick={reset}>Reset</button>
                 <button type="button" className="ft-ghost" onClick={skip}>Skip</button>
             </div> : null}
-            {settings.clockOnly !== true && settings.showHint ? <p className="ft-hint">Space start or pause · R reset · S skip · M minimize · F fullscreen</p> : null}
+            {settings.clockOnly !== true && settings.showHint ? <p className="ft-hint">Space start or pause · R reset · S skip · M minimize · F fullscreen · Esc close panels</p> : null}
+            {awayNote ? <p className="ft-awaytoast" role="status">{awayNote}<button type="button" className="ft-awaytoast-x" aria-label="Dismiss note" onClick={() => setAwayNote('')}>×</button></p> : null}
         </main>
 
         {compact ? <div className="ft-compactpill" role="dialog" aria-label="Minimized timer">
@@ -1978,4 +2033,4 @@ function MainApp() {
 
         {settings.musicOpen !== false ? <MusicPlayer settings={settings} patch={patch} spotifySrc={spotifySrc} onOpenSettings={openSettingsPanel} /> : null}
     </div>;
-            }
+}
