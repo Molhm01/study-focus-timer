@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    StatsState, TasksState, Snapshot, snapshotFrom, xpFrom, levelFromXp, LevelInfo,
+    StatsState, TasksState, Snapshot, DayStat, snapshotFrom, xpFrom, levelFromXp, LevelInfo,
+    ACHIEVEMENTS, AchievementCtx, todayKey,
 } from './engine';
+import { dailyQuests, evalQuests, QuestProgress } from './quests';
 import type { AvatarSpec } from './Avatar';
 
 // ---------- storage ----------
@@ -14,6 +16,10 @@ const TASKS_KEY = 'sft:ft-tasks.v1';
 const SESSION_KEY = 'sft:ft-session.v1';
 const PROFILE_KEY = 'sft:ft-profile.v1';
 const LEDGER_KEY = 'sft:ft-progress-ledger.v1';
+// Quest XP is additive bonus on top of the stats-derived XP, so claiming can
+// never rewrite earned history, and existing guests keep their exact level.
+const BONUS_KEY = 'sft:ft-xp-bonus.v1';
+const QUESTS_KEY = 'sft:ft-quests.v1';
 
 // ---------- lifetime completion ledger ----------
 // The task list itself is mutable checklist state: tasks can be unticked,
@@ -91,6 +97,66 @@ interface ProgressMeta {
     celebratedLevel: number;
 }
 
+interface Bonus { total: number; questsClaimed: number }
+interface QuestClaims { day: string; claimed: string[] }
+
+function loadBonus(): Bonus {
+    const saved = readJSON<Partial<Bonus>>(BONUS_KEY);
+    return { total: Math.max(0, Math.floor(saved?.total || 0)), questsClaimed: Math.max(0, Math.floor(saved?.questsClaimed || 0)) };
+}
+function saveBonus(b: Bonus): void {
+    try { window.localStorage.setItem(BONUS_KEY, JSON.stringify(b)); } catch { /* blocked */ }
+}
+function loadClaims(): QuestClaims {
+    const saved = readJSON<Partial<QuestClaims>>(QUESTS_KEY);
+    if (saved && saved.day === todayKey() && Array.isArray(saved.claimed)) return { day: saved.day, claimed: saved.claimed };
+    return { day: todayKey(), claimed: [] };
+}
+function saveClaims(c: QuestClaims): void {
+    try { window.localStorage.setItem(QUESTS_KEY, JSON.stringify(c)); } catch { /* blocked */ }
+}
+
+// Streak as of yesterday: stable all day, drives the streak-quest pick.
+function streakThroughYesterday(stats: StatsState): number {
+    const days = stats.days || {};
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    let n = 0;
+    while ((days[todayKey(d)]?.sessions || 0) > 0) { n++; d.setDate(d.getDate() - 1); }
+    return n;
+}
+
+function tasksCompletedToday(ledger: Ledger): number {
+    const today = todayKey();
+    let n = 0;
+    for (const ts of Object.values(ledger.tasks)) {
+        if (typeof ts === 'number' && todayKey(new Date(ts)) === today) n++;
+    }
+    return n;
+}
+
+// Standalone storage read for the topbar alert dot: unclaimed quests plus
+// unseen achievements. Runs outside React (small, every 15s).
+export function alertCount(): number {
+    const stats = readJSON<StatsState>(STATS_KEY) || { days: {} };
+    const tasks = readJSON<TasksState>(TASKS_KEY) || { tasks: [], activeId: null };
+    const ledger = loadLedger();
+    const snapshot = snapshotFrom(stats, tasks, Object.keys(ledger.tasks).length);
+    const bonus = loadBonus();
+    const claims = loadClaims();
+    const today = stats.days[todayKey()];
+    const quests = evalQuests(dailyQuests(todayKey(), streakThroughYesterday(stats)), {
+        todayMin: Math.round((today?.focusSec || 0) / 60),
+        todaySessions: today?.sessions || 0,
+        tasksToday: tasksCompletedToday(ledger),
+    });
+    const claimable = quests.filter((q) => q.done && !claims.claimed.includes(q.id)).length;
+    const meta = loadMeta();
+    const ctx: AchievementCtx = { xp: xpFrom(snapshot) + bonus.total, questsClaimed: bonus.questsClaimed };
+    const unseen = ACHIEVEMENTS.filter((a) => a.unlocked(snapshot, ctx) && !meta.seenAchievements.includes(a.id)).length;
+    return claimable + unseen;
+}
+
 function readJSON<T>(key: string): T | null {
     try {
         const raw = window.localStorage.getItem(key);
@@ -125,7 +191,15 @@ export function readStudyingNow(): boolean {
 export interface Progression {
     ready: boolean;
     snapshot: Snapshot;
+    statsDays: Record<string, DayStat>;
     levelInfo: LevelInfo;
+    xpTotal: number;
+    bonusXp: number;
+    quests: QuestProgress[];
+    claimQuest: (id: string) => number;
+    claimableCount: number;
+    questsClaimedTotal: number;
+    achCtx: AchievementCtx;
     profile: Profile;
     setProfile: (patch: Partial<Profile>) => void;
     replaceProfile: (p: Profile) => void;
@@ -164,7 +238,42 @@ export function useProgression(active: boolean): Progression {
         () => snapshotFrom(stats, tasks, Object.keys(lifetimeTasks.tasks).length),
         [stats, tasks, lifetimeTasks],
     );
-    const levelInfo = useMemo(() => levelFromXp(xpFrom(snapshot)), [snapshot]);
+    const [bonus, setBonus] = useState<Bonus>(() => loadBonus());
+    const [claims, setClaims] = useState<QuestClaims>(() => loadClaims());
+    // Day rollover while open: re-read both stores on the refresh tick.
+    useEffect(() => { setBonus(loadBonus()); setClaims(loadClaims()); }, [tick]);
+    const xpTotal = useMemo(() => xpFrom(snapshot) + bonus.total, [snapshot, bonus]);
+    const levelInfo = useMemo(() => levelFromXp(xpTotal), [xpTotal]);
+    const achCtx = useMemo<AchievementCtx>(() => ({ xp: xpTotal, questsClaimed: bonus.questsClaimed }), [xpTotal, bonus]);
+
+    const quests = useMemo<QuestProgress[]>(() => {
+        const today = stats.days[todayKey()];
+        return evalQuests(dailyQuests(todayKey(), streakThroughYesterday(stats)), {
+            todayMin: Math.round((today?.focusSec || 0) / 60),
+            todaySessions: today?.sessions || 0,
+            tasksToday: tasksCompletedToday(lifetimeTasks),
+        }).map((q) => q);
+    }, [stats, lifetimeTasks]);
+    const questsWithClaims = useMemo(
+        () => quests.map((q) => ({ ...q, claimed: claims.claimed.includes(q.id) })),
+        [quests, claims],
+    );
+    const claimableCount = questsWithClaims.filter((q) => q.done && !q.claimed).length;
+
+    // Claim a completed quest: awards its XP into the additive bonus store and
+    // records the claim for today. Returns the XP awarded (0 if not claimable).
+    const claimQuest = useCallback((id: string): number => {
+        const q = questsWithClaims.find((x) => x.id === id);
+        if (!q || !q.done || q.claimed) return 0;
+        const nextClaims = { day: todayKey(), claimed: [...claims.claimed, id] };
+        const nextBonus = { total: bonus.total + q.xp, questsClaimed: bonus.questsClaimed + 1 };
+        saveClaims(nextClaims);
+        saveBonus(nextBonus);
+        setClaims(nextClaims);
+        setBonus(nextBonus);
+        try { window.dispatchEvent(new Event('sft:progress')); } catch { /* noop */ }
+        return q.xp;
+    }, [questsWithClaims, claims, bonus]);
 
     const setProfile = useCallback((patch: Partial<Profile>) => {
         setProfileState((prev) => {
@@ -201,7 +310,15 @@ export function useProgression(active: boolean): Progression {
     return {
         ready: true,
         snapshot,
+        statsDays: stats.days,
         levelInfo,
+        xpTotal,
+        bonusXp: bonus.total,
+        quests: questsWithClaims,
+        claimQuest,
+        claimableCount,
+        questsClaimedTotal: bonus.questsClaimed,
+        achCtx,
         profile,
         setProfile,
         replaceProfile,
@@ -210,4 +327,4 @@ export function useProgression(active: boolean): Progression {
         celebrateLevel,
         storageMessage,
     };
-}
+            }
