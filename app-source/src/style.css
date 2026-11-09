@@ -11,7 +11,7 @@ body { background: #101418; }
 .ft-chip { font-size: 12px; opacity: 0.85; background: rgba(0,0,0,0.28); padding: 6px 12px; border-radius: 999px; white-space: nowrap; }
 .ft-topbar-actions { display: flex; gap: 8px; margin-left: auto; }
 
-.ft-iconbtn { width: 40px; height: 40px; border-radius: 13px; border: 1px solid rgba(255,255,255,0.16); background: rgba(10,14,20,0.42); color: #fff; font-size: 17px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease; }
+.ft-iconbtn { position: relative; width: 40px; height: 40px; border-radius: 13px; border: 1px solid rgba(255,255,255,0.16); background: rgba(10,14,20,0.42); color: #fff; font-size: 17px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease; }
 .ft-iconbtn:hover, .ft-iconbtn.is-active { background: rgba(255,255,255,0.16); border-color: rgba(255,255,255,0.3); }
 .ft-iconbtn:hover { transform: translateY(-1px); }
 .ft-iconbtn:active { transform: translateY(0); }
@@ -288,3 +288,56 @@ body { background: #101418; }
 .ft-taskedit { flex: 1; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: #eee; font-size: 14px; font-family: inherit; padding: 5px 8px; }
 .ft-taskeditbtn { border: 0; background: none; color: rgba(255,255,255,0.4); font-size: 13px; cursor: pointer; padding: 4px 6px; }
 .ft-taskeditbtn:hover { color: #fff; }
+
+/* ---------- progression 2.0: quests, chart, celebrations ---------- */
+.pf-dot { position: absolute; top: 6px; right: 6px; width: 9px; height: 9px; border-radius: 50%; background: #ffd166; box-shadow: 0 0 6px #ffd166; pointer-events: none; }
+
+.pf-bubble { margin-top: 12px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.14); border-radius: 12px 12px 12px 4px; padding: 9px 12px; font-size: 13px; line-height: 1.4; }
+.pf-bonus-note { margin-top: 6px; }
+
+.pf-quests { display: flex; flex-direction: column; gap: 8px; }
+.pf-quest { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.05); border: 1px solid transparent; border-radius: 12px; padding: 10px 12px; }
+.pf-quest.is-done { border-color: rgba(159,216,198,0.45); background: rgba(159,216,198,0.08); }
+.pf-quest.is-claimed { opacity: 0.55; }
+.pf-quest-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.pf-quest-body strong { font-size: 13px; font-weight: 600; }
+.pf-quest-prog { display: flex; align-items: center; gap: 8px; }
+.pf-quest-bar { flex: 1; height: 5px; border-radius: 999px; background: rgba(255,255,255,0.12); overflow: hidden; }
+.pf-quest-bar span { display: block; height: 100%; border-radius: 999px; background: var(--ft-accent, #9fd8c6); transition: width 0.4s ease; }
+.pf-quest-num { font-size: 11px; opacity: 0.6; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pf-quest-xp { font-size: 12px; opacity: 0.55; white-space: nowrap; }
+.pf-quest-claimed { font-size: 12px; color: var(--ft-accent, #9fd8c6); white-space: nowrap; }
+
+.pf-week-bars { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; align-items: end; height: 92px; }
+.pf-week-bar { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; height: 100%; background: none; border: 0; cursor: pointer; padding: 0; font-family: inherit; }
+.pf-week-fill { width: 100%; border-radius: 6px 6px 3px 3px; background: rgba(255,255,255,0.22); transition: height 0.3s ease, background 0.2s ease; }
+.pf-week-bar:hover .pf-week-fill, .pf-week-bar.is-active .pf-week-fill { background: var(--ft-accent, #9fd8c6); }
+.pf-week-bar.is-best .pf-week-fill { box-shadow: 0 0 8px rgba(159,216,198,0.5); }
+.pf-week-day { font-size: 10px; opacity: 0.55; color: #fff; }
+.pf-week-bar.is-active .pf-week-day { opacity: 1; }
+.pf-week-caption { margin-top: 8px; font-size: 12px; opacity: 0.85; }
+.pf-week-caption strong { font-weight: 650; }
+
+.pf-ach-prog { display: flex; align-items: center; gap: 8px; margin-top: 5px; }
+
+.pf-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 5; }
+.pf-confetti span { position: absolute; top: -12px; display: block; animation: pf-confetti-fall linear forwards; }
+@keyframes pf-confetti-fall {
+    0% { transform: translate(0, -12px) rotate(0deg); opacity: 1; }
+    85% { opacity: 1; }
+    100% { transform: translate(var(--dx, 0), 110vh) rotate(480deg); opacity: 0; }
+}
+
+.pf-xpfloat { position: absolute; top: 84px; left: 50%; transform: translateX(-50%); z-index: 6; background: var(--ft-accent, #9fd8c6); color: #1c1c1c; font-weight: 700; font-size: 14px; border-radius: 999px; padding: 7px 14px; box-shadow: 0 6px 18px rgba(0,0,0,0.4); animation: pf-float-up 1.7s ease forwards; pointer-events: none; white-space: nowrap; }
+@keyframes pf-float-up {
+    0% { transform: translate(-50%, 10px); opacity: 0; }
+    15% { transform: translate(-50%, 0); opacity: 1; }
+    75% { opacity: 1; }
+    100% { transform: translate(-50%, -22px); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pf-confetti span { animation: none; opacity: 0; }
+    .pf-xpfloat { animation-duration: 0.01s; }
+    .pf-quest-bar span, .pf-week-fill { transition: none; }
+    }
