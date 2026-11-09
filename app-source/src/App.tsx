@@ -2033,4 +2033,4 @@ function MainApp() {
 
         {settings.musicOpen !== false ? <MusicPlayer settings={settings} patch={patch} spotifySrc={spotifySrc} onOpenSettings={openSettingsPanel} /> : null}
     </div>;
-              }
+}
