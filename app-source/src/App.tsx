@@ -86,6 +86,7 @@ interface Settings {
     accent: string; font: string;
     clockStyle: 'ring' | 'bar' | 'minimal'; clockSize: 's' | 'm' | 'l';
     showDots: boolean; showChip: boolean; showHint: boolean;
+    clockOnly: boolean;
     spotify: string | null; spotifyOpen: boolean;
     musicOpen: boolean; musicMode: 'radio' | 'spotify';
     radio: { index: number; playing: boolean; volume: number };
@@ -109,6 +110,7 @@ const DEFAULT_SETTINGS: Settings = {
     accent: '#9fd8c6', font: 'sans',
     clockStyle: 'ring', clockSize: 'm',
     showDots: true, showChip: true, showHint: true,
+    clockOnly: false,
     spotify: null, spotifyOpen: false,
     musicOpen: true, musicMode: 'radio',
     radio: { index: 0, playing: false, volume: 0.7 },
@@ -546,7 +548,7 @@ function Toggle({ label, hint, checked, onChange }: { label: string; hint?: stri
 }
 
 // ---------- memoized subtrees: the ticking clock must not re-render these ----------
-const SceneVideo = React.memo(function SceneVideo({ scene, paused, animate, onReady, onFail }: { scene: SceneDef; paused: boolean; animate: boolean; onReady: (s: SceneDef) => void; onFail: (s: SceneDef) => void }) {
+const SceneVideo = React.memo(function SceneVideo({ scene, token, paused, animate, onReady, onFail }: { scene: SceneDef; token: number; paused: boolean; animate: boolean; onReady: (key: number) => void; onFail: (key: number) => void }) {
     const root = useRef<HTMLDivElement | null>(null);
     const [error, setError] = useState(false);
     const [attempt, setAttempt] = useState(0);
@@ -575,7 +577,7 @@ const SceneVideo = React.memo(function SceneVideo({ scene, paused, animate, onRe
             if (errSeen || dead) return; errSeen = true;
             setAttempt((cur) => {
                 if (cur < ladder.length - 1) return cur + 1;
-                setError(true); if (a) { a.remove(); a = null; } cb.current.onFail(scene); return cur;
+                setError(true); if (a) { a.remove(); a = null; } cb.current.onFail(token); return cur;
             });
         };
         let b: HTMLVideoElement | null = null;
@@ -595,7 +597,7 @@ const SceneVideo = React.memo(function SceneVideo({ scene, paused, animate, onRe
         };
         const paint = () => {
             if (dead || !a) return;
-            if (!started && a.readyState >= 2) { started = true; if (root.current) root.current.style.opacity = '1'; cb.current.onReady(scene); if (runWanted()) play(a); }
+            if (!started && a.readyState >= 2) { started = true; if (root.current) root.current.style.opacity = '1'; cb.current.onReady(token); if (runWanted()) play(a); }
             if (runWanted() && started) {
                 if (a.paused && !a.ended) play(a);
                 const end = scene.duration || a.duration;
@@ -637,33 +639,49 @@ const SceneVideo = React.memo(function SceneVideo({ scene, paused, animate, onRe
 });
 
 // Scene switching: the previously decoded scene stays on screen until the new scene's first frame is ready, then swaps. On first visit a still photo shows until first decode; on failure the previous scene (or the still) remains - never a stretched preview thumbnail or a different-looking fallback scene.
+// Readiness is tracked per mounted video (a numeric token), never per scene id: re-picking a scene you already
+// watched mounts a fresh video that is NOT ready yet, and the old scene must stay visible until it is. A stale
+// per-id "ready" once dropped the visible scene right after a re-pick, leaving a black gap while it reloaded.
 const SceneStage = React.memo(function SceneStage({ scene, paused, animate }: { scene: SceneDef; paused: boolean; animate: boolean }) {
-    const [stack, setStack] = useState<SceneDef[]>([scene]);
-    const [readyId, setReadyId] = useState<string | null>(null);
+    const [stack, setStack] = useState<{ s: SceneDef; key: number }[]>([{ s: scene, key: 0 }]);
+    const [readyKey, setReadyKey] = useState<number | null>(null);
     const firstStill = useImageUrl('rain');
-    const currentId = useRef(scene.id);
-    const readyIdRef = useRef<string | null>(null);
+    const keySeq = useRef(0);
+    const stackRef = useRef(stack);
+    const currentKey = useRef(0);
+    const readyKeyRef = useRef<number | null>(null);
+    const applyStack = (next: { s: SceneDef; key: number }[]) => { stackRef.current = next; setStack(next); };
     useEffect(() => {
-        currentId.current = scene.id;
-        setStack((prev) => (prev.length && prev[prev.length - 1].id === scene.id) ? prev : [...prev.filter((s) => s.id !== scene.id).slice(-1), scene]);
-        // When the newly picked scene is already decoded (no new "ready" event will fire), the ready-path
-        // cleanup never runs - drop the older stage here so it cannot linger playing behind the current one.
-        const id = scene.id;
-        window.setTimeout(() => { if (currentId.current === id && readyIdRef.current === id) setStack((prev) => prev.filter((x) => x.id === id)); }, 400);
+        const cur = stackRef.current;
+        const top = cur[cur.length - 1];
+        if (top && top.s.id === scene.id) {
+            // Re-picked the scene already on top: its video is alive, so no new "ready" event will fire -
+            // drop the older stage here so it cannot linger playing behind the current one.
+            currentKey.current = top.key;
+            const k = top.key;
+            window.setTimeout(() => { if (currentKey.current === k && readyKeyRef.current === k) applyStack(stackRef.current.filter((x) => x.key === k)); }, 400);
+            return;
+        }
+        const key = ++keySeq.current;
+        currentKey.current = key;
+        applyStack([...cur.filter((x) => x.s.id !== scene.id).slice(-1), { s: scene, key }]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [scene]);
-    const handleReady = useCallback((s: SceneDef) => {
-        // A scene that is no longer selected must never shrink the stack: its late "ready" would otherwise
-        // filter the stack down to a scene that is no longer in it, emptying the stage until reload.
-        if (s.id !== currentId.current) return;
-        readyIdRef.current = s.id;
-        setReadyId(s.id);
-        window.setTimeout(() => { if (currentId.current === s.id) setStack((prev) => prev.filter((x) => x.id === s.id)); }, 400);
+    const handleReady = useCallback((key: number) => {
+        // A stage that is no longer selected must never shrink the stack: its late "ready" would otherwise
+        // filter the stack down to a stage that is no longer in it, emptying the stage until reload.
+        if (key !== currentKey.current) return;
+        readyKeyRef.current = key;
+        setReadyKey(key);
+        window.setTimeout(() => { if (currentKey.current === key) applyStack(stackRef.current.filter((x) => x.key === key)); }, 400);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
-    const handleFail = useCallback((_s: SceneDef) => { /* failed scene keeps its error note; previous scene or the still stays visible behind it */ }, []);
-    const loading = readyId === null || !stack.some((s) => s.id === readyId);
+    const handleFail = useCallback((_key: number) => { /* failed scene keeps its error note; previous scene or the still stays visible behind it */ }, []);
+    const loading = readyKey === null || readyKey !== currentKey.current;
     return <>
         {loading ? <div className="ft-bg" style={{ backgroundColor: '#101418', backgroundImage: firstStill ? `url(${firstStill})` : undefined, backgroundSize: 'cover', backgroundPosition: 'center' }} /> : null}
-        {stack.map((s) => <SceneVideo key={s.id} scene={s} paused={paused} animate={animate} onReady={handleReady} onFail={handleFail} />)}
+        {stack.map((x) => <SceneVideo key={x.key} scene={x.s} token={x.key} paused={paused} animate={animate} onReady={handleReady} onFail={handleFail} />)}
+        {loading && stack.length > 1 ? <div className="ft-scene-switching" aria-hidden="true"><i /></div> : null}
     </>;
 });
 
@@ -1165,6 +1183,7 @@ const SettingsSheet = React.memo(function SettingsSheet({ settings, patch, bgSta
                     {([['s', 'Small'], ['m', 'Medium'], ['l', 'Large']] as const).map(([id, name]) => <button key={id} type="button" className={`ft-chipbtn ${settings.clockSize === id ? 'is-active' : ''}`} onClick={() => patch({ clockSize: id })}>{name}</button>)}
                 </div>
             </div>
+            <Toggle label="Clock-only mode" hint="Hides the mode tabs and buttons so only the clock shows. Drag the clock anywhere and resize it from its corner handle; use the round button under it to bring the controls back." checked={settings.clockOnly === true} onChange={(v) => patch({ clockOnly: v })} />
             <Toggle label="Cycle dots" checked={settings.showDots} onChange={(v) => patch({ showDots: v })} />
             <Toggle label="Today's stats chip" checked={settings.showChip} onChange={(v) => patch({ showChip: v })} />
             <Toggle label="Shortcut hints" checked={settings.showHint} onChange={(v) => patch({ showHint: v })} />
@@ -1307,6 +1326,37 @@ export function App() {
 
 function MainApp() {
     const [settings, setSettings, settingsSaved] = useLocalState<Settings>('ft-settings.v2', DEFAULT_SETTINGS);
+    // Clock-only mode: free position + scale of the clock, persisted so it survives reloads.
+    const [clockFree, setClockFree] = useLocalState<{ x: number; y: number; s: number } | null>('ft-clockfree.v1', null);
+    const clockCenterRef = useRef<HTMLDivElement | null>(null);
+    const clockDragRef = useRef<{ mode: 'move' | 'resize'; id: number; sx: number; sy: number; ox: number; oy: number; ss: number } | null>(null);
+    const startClockGesture = useCallback((mode: 'move' | 'resize') => (e: React.PointerEvent) => {
+        const el = clockCenterRef.current; if (!el) return;
+        const rect = el.getBoundingClientRect();
+        setClockFree((prev) => {
+            const cur = prev || { x: rect.left, y: rect.top, s: 1 };
+            clockDragRef.current = { mode, id: e.pointerId, sx: e.clientX, sy: e.clientY, ox: cur.x, oy: cur.y, ss: cur.s };
+            return cur;
+        });
+        (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+        e.preventDefault();
+    }, [setClockFree]);
+    const onClockPointerMove = useCallback((e: React.PointerEvent) => {
+        const d = clockDragRef.current; if (!d || d.id !== e.pointerId) return;
+        if (d.mode === 'move') {
+            setClockFree((prev) => prev ? { ...prev, x: Math.min(Math.max(d.ox + e.clientX - d.sx, -40), window.innerWidth - 60), y: Math.min(Math.max(d.oy + e.clientY - d.sy, 0), window.innerHeight - 60) } : prev);
+        } else {
+            const el = clockCenterRef.current; if (!el) return;
+            const rect = el.getBoundingClientRect();
+            const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+            const d0 = Math.max(30, Math.hypot(d.sx - cx, d.sy - cy));
+            const d1 = Math.hypot(e.clientX - cx, e.clientY - cy);
+            setClockFree((prev) => prev ? { ...prev, s: Math.min(2.6, Math.max(0.45, d.ss * (d1 / d0))) } : prev);
+        }
+    }, [setClockFree]);
+    const onClockPointerEnd = useCallback((e: React.PointerEvent) => {
+        if (clockDragRef.current && clockDragRef.current.id === e.pointerId) clockDragRef.current = null;
+    }, []);
     const [tasksState, setTasksState, tasksSaved] = useLocalState<TasksState>('ft-tasks.v1', { tasks: [], activeId: null });
     const [stats, setStats, statsSaved] = useLocalState<StatsState>('ft-stats.v1', { days: {} });
     const [session, setSession, sessionSaved] = useLocalState<{ phase: Phase; running: boolean; endAt: number; remainingMs: number; cycleCount: number } | null>('ft-session.v1', null);
@@ -1565,8 +1615,14 @@ function MainApp() {
         return () => window.clearInterval(iv);
     }, [running]);
 
-    // keep display in sync when durations are edited while idle (phase switches preserve progress instead)
+    // keep display in sync when durations are edited while idle (phase switches preserve progress instead).
+    // Only a real change in the minute values may reset the display: settings re-identity on load used to
+    // re-fire this effect and wipe a restored paused timer back to the full duration after a reload.
+    const prevDurationsRef = useRef(durations);
     useEffect(() => {
+        const prev = prevDurationsRef.current;
+        prevDurationsRef.current = durations;
+        if (prev.focus === durations.focus && prev.short === durations.short && prev.long === durations.long) return;
         if (!runningRef.current) {
             delete phaseStashRef.current[phaseRef.current];
             setRemaining(durations[phaseRef.current]);
@@ -1812,17 +1868,21 @@ function MainApp() {
 
         <TopBar chip={chip} panel={panel} fullscreenSupported={fullscreenSupported} onFullscreen={toggleFullscreen} onTasks={toggleTasks} onSettings={toggleSettings} onMinimize={minimize} onPopout={popOut} onProfile={toggleProfile} />
 
-        <main className="ft-center">
-            <nav className="ft-modes" aria-label="Timer mode">
+        <main ref={clockCenterRef} className={`ft-center ${settings.clockOnly === true ? 'is-clockonly' : ''}`}
+            style={settings.clockOnly === true && clockFree ? { left: clockFree.x, top: clockFree.y, transform: `scale(${clockFree.s})`, transformOrigin: 'top left' } : undefined}
+            onPointerMove={settings.clockOnly === true ? onClockPointerMove : undefined}
+            onPointerUp={settings.clockOnly === true ? onClockPointerEnd : undefined}
+            onPointerCancel={settings.clockOnly === true ? onClockPointerEnd : undefined}>
+            {settings.clockOnly !== true ? <nav className="ft-modes" aria-label="Timer mode">
                 {(['focus', 'short', 'long'] as Phase[]).map((p) => (
                     <button key={p} type="button" className={`ft-mode ${phase === p ? 'is-active' : ''}`} onClick={() => switchPhase(p)}>{PHASE_LABEL[p]}</button>
                 ))}
-            </nav>
-            {settings.showDots ? <div className="ft-dots" aria-label="Cycle progress">
+            </nav> : null}
+            {settings.clockOnly !== true && settings.showDots ? <div className="ft-dots" aria-label="Cycle progress">
                 {Array.from({ length: Math.max(1, settings.longEvery) }).map((_, i) => <span key={i} className={`ft-dot ${i < cycleCount % Math.max(1, settings.longEvery) || (cycleCount > 0 && cycleCount % Math.max(1, settings.longEvery) === 0 && phase !== 'focus') ? 'is-done' : ''}`} />)}
             </div> : null}
 
-            <div className={`ft-clock is-${settings.clockSize}`} role="timer" aria-live="off" aria-label={`${PHASE_LABEL[phase]} timer, ${fmt(remaining)} remaining`}>
+            <div className={`ft-clock is-${settings.clockSize} ${settings.clockOnly === true ? 'is-free' : ''}`} role="timer" aria-live="off" aria-label={`${PHASE_LABEL[phase]} timer, ${fmt(remaining)} remaining`} onPointerDown={settings.clockOnly === true ? startClockGesture('move') : undefined} title={settings.clockOnly === true ? 'Drag to move' : undefined}>
                 {settings.clockStyle === 'ring' ? <svg className="ft-ring" viewBox="0 0 260 260" aria-hidden="true">
                     <circle className="ft-ring-track" cx="130" cy="130" r={R} />
                     <circle className="ft-ring-fill" cx="130" cy="130" r={R} strokeDasharray={CIRC} strokeDashoffset={CIRC * (1 - progress)} />
@@ -1832,14 +1892,18 @@ function MainApp() {
                     <div className="ft-taskline">{activeTask ? activeTask.title : phase === 'focus' ? 'Pick a task or just focus' : 'Rest up'}</div>
                 </div>
             </div>
+            {settings.clockOnly === true ? <div className="ft-clockonly-tools">
+                <button type="button" className="ft-ghost is-compact ft-clockonly-exit" aria-label="Show timer controls" onPointerDown={(e) => e.stopPropagation()} onClick={() => patch({ clockOnly: false })}>Show controls</button>
+                <button type="button" className="ft-clock-resize" aria-label="Drag to resize the clock" onPointerDown={startClockGesture('resize')}>⤡</button>
+            </div> : null}
             {settings.clockStyle === 'bar' ? <div className="ft-progressbar" aria-hidden="true"><span style={{ width: `${Math.round(progress * 100)}%` }} /></div> : null}
 
-            <div className="ft-controls">
+            {settings.clockOnly !== true ? <div className="ft-controls">
                 <button type="button" className="ft-primary" onClick={() => (running ? pause() : start())}>{running ? 'Pause' : remaining < durations[phase] ? 'Resume' : 'Start'}</button>
                 <button type="button" className="ft-ghost" onClick={reset}>Reset</button>
                 <button type="button" className="ft-ghost" onClick={skip}>Skip</button>
-            </div>
-            {settings.showHint ? <p className="ft-hint">Space start or pause · R reset · S skip · M minimize · F fullscreen</p> : null}
+            </div> : null}
+            {settings.clockOnly !== true && settings.showHint ? <p className="ft-hint">Space start or pause · R reset · S skip · M minimize · F fullscreen</p> : null}
         </main>
 
         {compact ? <div className="ft-compactpill" role="dialog" aria-label="Minimized timer">
@@ -1880,4 +1944,4 @@ function MainApp() {
 
         {settings.musicOpen !== false ? <MusicPlayer settings={settings} patch={patch} spotifySrc={spotifySrc} onOpenSettings={openSettingsPanel} /> : null}
     </div>;
-        }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               }
