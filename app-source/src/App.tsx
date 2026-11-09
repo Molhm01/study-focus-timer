@@ -394,6 +394,7 @@ function makeNoiseBuffer(ctx: AudioContext, kind: 'white' | 'brown'): AudioBuffe
 
 const AUDIO_PARTS: Record<string, string[]> = {"sounds/rain.m4a":["sounds/rain-0.txt","sounds/rain-1.txt","sounds/rain-2.txt","sounds/rain-3.txt","sounds/rain-4.txt","sounds/rain-5.txt"],"sounds/thunderstorm.m4a":["sounds/thunderstorm-0.txt","sounds/thunderstorm-1.txt","sounds/thunderstorm-2.txt","sounds/thunderstorm-3.txt","sounds/thunderstorm-4.txt","sounds/thunderstorm-5.txt"],"sounds/ocean.m4a":["sounds/ocean-0.txt","sounds/ocean-1.txt","sounds/ocean-2.txt","sounds/ocean-3.txt","sounds/ocean-4.txt","sounds/ocean-5.txt"],"sounds/forest.m4a":["sounds/forest-0.txt","sounds/forest-1.txt","sounds/forest-2.txt","sounds/forest-3.txt","sounds/forest-4.txt"],"sounds/fireplace.m4a":["sounds/fireplace-0.txt","sounds/fireplace-1.txt","sounds/fireplace-2.txt","sounds/fireplace-3.txt","sounds/fireplace-4.txt","sounds/fireplace-5.txt"],"sounds/coffee-shop.m4a":["sounds/coffee-shop-0.txt","sounds/coffee-shop-1.txt","sounds/coffee-shop-2.txt","sounds/coffee-shop-3.txt","sounds/coffee-shop-4.txt","sounds/coffee-shop-5.txt"],"sounds/crickets.m4a":["sounds/crickets-0.txt","sounds/crickets-1.txt","sounds/crickets-2.txt","sounds/crickets-3.txt"],"sounds/wind.m4a":["sounds/wind-0.txt","sounds/wind-1.txt","sounds/wind-2.txt","sounds/wind-3.txt","sounds/wind-4.txt","sounds/wind-5.txt"],"sounds/stream.m4a":["sounds/stream-0.txt","sounds/stream-1.txt","sounds/stream-2.txt","sounds/stream-3.txt","sounds/stream-4.txt","sounds/stream-5.txt"]};
 const ambientBufCache: Record<string, Promise<AudioBuffer>> = {};
+let ambientBootDeferred = false;
 function ambientBuf(ctx: AudioContext, file: string): Promise<AudioBuffer> {
     if (!ambientBufCache[file]) {
         ambientBufCache[file] = Promise.all((AUDIO_PARTS[file] || []).map(async (part) => {
@@ -638,17 +639,21 @@ const SceneVideo = React.memo(function SceneVideo({ scene, token, paused, animat
     return <div ref={root} className="ft-scene-stage" key={src} style={{ opacity: 0, transition: 'opacity .25s' }}>{error && <span className="ft-stream-status">This scene could not load right now. Try another background.</span>}</div>;
 });
 
-// Scene switching: the previously decoded scene stays on screen until the new scene's first frame is ready, then swaps. On first visit a still photo shows until first decode; on failure the previous scene (or the still) remains - never a stretched preview thumbnail or a different-looking fallback scene.
+// Scene switching: the previously decoded scene stays fully on screen until the new scene's first frame is
+// ready, then the new one fades in over it. The full-screen cover is shown ONLY when no decoded scene exists
+// (first load, or a failure that left nothing playing): never during a switch, where it would cover the scene
+// that is still playing. Use a neutral color until a real decoded frame is available, never a blurry preview.
 // Readiness is tracked per mounted video (a numeric token), never per scene id: re-picking a scene you already
 // watched mounts a fresh video that is NOT ready yet, and the old scene must stay visible until it is. A stale
 // per-id "ready" once dropped the visible scene right after a re-pick, leaving a black gap while it reloaded.
 const SceneStage = React.memo(function SceneStage({ scene, paused, animate }: { scene: SceneDef; paused: boolean; animate: boolean }) {
     const [stack, setStack] = useState<{ s: SceneDef; key: number }[]>([{ s: scene, key: 0 }]);
     const [readyKey, setReadyKey] = useState<number | null>(null);
-    const firstStill = useImageUrl('rain');
+    const [failedKey, setFailedKey] = useState<number | null>(null);
     const keySeq = useRef(0);
     const stackRef = useRef(stack);
     const currentKey = useRef(0);
+    const readyKeys = useRef(new Set<number>());
     const readyKeyRef = useRef<number | null>(null);
     const applyStack = (next: { s: SceneDef; key: number }[]) => { stackRef.current = next; setStack(next); };
     useEffect(() => {
@@ -664,24 +669,41 @@ const SceneStage = React.memo(function SceneStage({ scene, paused, animate }: { 
         }
         const key = ++keySeq.current;
         currentKey.current = key;
-        applyStack([...cur.filter((x) => x.s.id !== scene.id).slice(-1), { s: scene, key }]);
+        const visible = cur.filter((x) => readyKeys.current.has(x.key)).slice(-1);
+        applyStack([...visible, { s: scene, key }]);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [scene]);
     const handleReady = useCallback((key: number) => {
         // A stage that is no longer selected must never shrink the stack: its late "ready" would otherwise
         // filter the stack down to a stage that is no longer in it, emptying the stage until reload.
+        readyKeys.current.add(key);
         if (key !== currentKey.current) return;
         readyKeyRef.current = key;
         setReadyKey(key);
         window.setTimeout(() => { if (currentKey.current === key) applyStack(stackRef.current.filter((x) => x.key === key)); }, 400);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
-    const handleFail = useCallback((_key: number) => { /* failed scene keeps its error note; previous scene or the still stays visible behind it */ }, []);
+    const handleFail = useCallback((key: number) => {
+        // Settle back onto the previous scene so its playback simply continues and the spinner stops,
+        // instead of covering a working scene with the loading cover forever.
+        setFailedKey(key);
+        if (key !== currentKey.current) return;
+        const rest = stackRef.current.filter((x) => x.key !== key);
+        if (!rest.length) return;
+        const nt = rest[rest.length - 1];
+        currentKey.current = nt.key;
+        applyStack(rest);
+        if (readyKeys.current.has(nt.key)) { readyKeyRef.current = nt.key; setReadyKey(nt.key); }
+        else { readyKeyRef.current = null; setReadyKey(null); }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
     const loading = readyKey === null || readyKey !== currentKey.current;
+    const anyReady = stack.some((x) => readyKeys.current.has(x.key));
+    const curFailed = failedKey !== null && failedKey === currentKey.current;
     return <>
-        {loading ? <div className="ft-bg" style={{ backgroundColor: '#101418', backgroundImage: firstStill ? `url(${firstStill})` : undefined, backgroundSize: 'cover', backgroundPosition: 'center' }} /> : null}
+        {!anyReady ? <div className="ft-bg" style={{ backgroundColor: '#101418' }} /> : null}
         {stack.map((x) => <SceneVideo key={x.key} scene={x.s} token={x.key} paused={paused} animate={animate} onReady={handleReady} onFail={handleFail} />)}
-        {loading && stack.length > 1 ? <div className="ft-scene-switching" aria-hidden="true"><i /></div> : null}
+        {loading && !curFailed ? <div className="ft-scene-switching" aria-hidden="true"><i /></div> : null}
     </>;
 });
 
@@ -1650,12 +1672,19 @@ function MainApp() {
     }, [remaining, phase]);
 
     // ---------- ambient ----------
+    // The first audible start of a session is deferred briefly so a loading scene video gets the
+    // connection first; later changes (volume, kind) apply immediately.
     useEffect(() => {
-        if (ambientStopRef.current) { ambientStopRef.current(); ambientStopRef.current = null; }
-        if (settings.ambient !== 'none') {
-            ambientStopRef.current = startAmbient(settings.ambient, settings.ambientVolume);
-        }
-        return () => { if (ambientStopRef.current) { ambientStopRef.current(); ambientStopRef.current = null; } };
+        let timer = 0;
+        const start = () => {
+            if (ambientStopRef.current) { ambientStopRef.current(); ambientStopRef.current = null; }
+            if (settings.ambient !== 'none') {
+                ambientStopRef.current = startAmbient(settings.ambient, settings.ambientVolume);
+            }
+        };
+        if (settings.ambient !== 'none' && !ambientBootDeferred) { ambientBootDeferred = true; timer = window.setTimeout(start, 1500); }
+        else start();
+        return () => { window.clearTimeout(timer); if (ambientStopRef.current) { ambientStopRef.current(); ambientStopRef.current = null; } };
     }, [settings.ambient, settings.ambientVolume]);
 
     // ---------- wake lock ----------
@@ -1947,4 +1976,4 @@ function MainApp() {
 
         {settings.musicOpen !== false ? <MusicPlayer settings={settings} patch={patch} spotifySrc={spotifySrc} onOpenSettings={openSettingsPanel} /> : null}
     </div>;
-            }
+    }
