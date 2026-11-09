@@ -1530,7 +1530,7 @@ function MainApp() {
     }, [sessionSaved.ready]);
 
     useEffect(() => {
-        if (!sessionSaved.ready || sessionRestoredRef.current) return;
+        if (!sessionSaved.ready || !settingsSaved.ready || sessionRestoredRef.current) return;
         sessionRestoredRef.current = true;
         if (!session) return;
         const p: Phase = session.phase === 'short' || session.phase === 'long' ? session.phase : 'focus';
@@ -1549,7 +1549,7 @@ function MainApp() {
             setRunning(false);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [sessionSaved.ready]);
+    }, [sessionSaved.ready, settingsSaved.ready]);
 
     // ---------- timer core ----------
     const phaseStashRef = useRef<Partial<Record<Phase, number>>>({});
@@ -1616,19 +1616,22 @@ function MainApp() {
     }, [running]);
 
     // keep display in sync when durations are edited while idle (phase switches preserve progress instead).
-    // Only a real change in the minute values may reset the display: settings re-identity on load used to
-    // re-fire this effect and wipe a restored paused timer back to the full duration after a reload.
+    // Settings hydrate asynchronously: the defaults -> stored transition must NOT count as an edit, or it
+    // wipes the restored paused timer right after load. Only a value change after hydration may reset it.
     const prevDurationsRef = useRef(durations);
+    const durationsReadyRef = useRef(false);
     useEffect(() => {
         const prev = prevDurationsRef.current;
         prevDurationsRef.current = durations;
+        if (!settingsSaved.ready) return;
+        if (!durationsReadyRef.current) { durationsReadyRef.current = true; return; }
         if (prev.focus === durations.focus && prev.short === durations.short && prev.long === durations.long) return;
         if (!runningRef.current) {
             delete phaseStashRef.current[phaseRef.current];
             setRemaining(durations[phaseRef.current]);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [durations]);
+    }, [durations, settingsSaved.ready]);
 
     // ticking sound
     const lastTickRef = useRef(0);
@@ -1944,4 +1947,4 @@ function MainApp() {
 
         {settings.musicOpen !== false ? <MusicPlayer settings={settings} patch={patch} spotifySrc={spotifySrc} onOpenSettings={openSettingsPanel} /> : null}
     </div>;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               }
+            }
