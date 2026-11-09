@@ -70,7 +70,7 @@ const photoCache: Record<string, string> = {};
 const thumbCache: Record<string, string> = {};
 
 type Phase = 'focus' | 'short' | 'long';
-type BgKind = 'builtin' | 'gradient' | 'link' | 'upload' | 'animated' | 'scene';
+type BgKind = 'builtin' | 'link' | 'upload' | 'scene' | 'color';
 
 interface Settings {
     focusMin: number; shortMin: number; longMin: number; longEvery: number;
@@ -87,6 +87,8 @@ interface Settings {
     clockStyle: 'ring' | 'bar' | 'minimal'; clockSize: 's' | 'm' | 'l';
     showDots: boolean; showChip: boolean; showHint: boolean;
     spotify: string | null; spotifyOpen: boolean;
+    musicOpen: boolean; musicMode: 'radio' | 'spotify';
+    radio: { index: number; playing: boolean; volume: number };
 }
 
 interface Task { id: string; title: string; est: number; done: number; completed: boolean; }
@@ -108,6 +110,8 @@ const DEFAULT_SETTINGS: Settings = {
     clockStyle: 'ring', clockSize: 'm',
     showDots: true, showChip: true, showHint: true,
     spotify: null, spotifyOpen: false,
+    musicOpen: true, musicMode: 'radio',
+    radio: { index: 0, playing: false, volume: 0.7 },
 };
 
 const BUILTIN_BGS = [
@@ -121,19 +125,65 @@ const BUILTIN_BGS = [
     { id: 'ocean', name: 'Ocean' },
 ];
 
-const GRADIENTS = [
-    { id: 'dusk', name: 'Dusk', css: 'linear-gradient(160deg, #232453 0%, #6b3f63 55%, #c96f4a 100%)' },
-    { id: 'moss', name: 'Moss', css: 'linear-gradient(160deg, #0f2e25 0%, #1d5c46 60%, #7ea87b 100%)' },
-    { id: 'ink', name: 'Ink', css: 'linear-gradient(160deg, #101418 0%, #1f2a33 100%)' },
-    { id: 'dawn', name: 'Dawn', css: 'linear-gradient(160deg, #3b2f4a 0%, #8a5a6e 55%, #e8a87c 100%)' },
+// Solid background colors: one-tap presets; the color wheel below picks any color.
+const SOLID_COLORS = [
+    { id: '#101418', name: 'Ink' },
+    { id: '#16213a', name: 'Midnight' },
+    { id: '#122b21', name: 'Forest' },
+    { id: '#2e1a33', name: 'Plum' },
+    { id: '#33191f', name: 'Wine' },
+    { id: '#232a30', name: 'Slate' },
+    { id: '#3a2e1e', name: 'Cocoa' },
+    { id: '#d8cfc0', name: 'Paper' },
 ];
 
-const ANIMATED_BGS = [
-    { id: 'aurora', name: 'Aurora' },
-    { id: 'meteor', name: 'Falling stars' },
-    { id: 'waves', name: 'Night waves' },
-    { id: 'rainfall', name: 'Rain streaks' },
+// ---------- focus radio: built-in free lofi ----------
+// Streams directly from Pixabay's CDN only while playing (Pixabay Content License: free use,
+// no attribution required - same license as the scene videos). Source links in README.
+// Tracks are instrumental; the player shows live title, artist and cover.
+interface RadioTrack { id: string; title: string; artist: string; url: string; cover: string; seconds: number }
+const RADIO_TRACKS: RadioTrack[] = [
+    { id: 'chillhop-jazz', title: 'Chillhop Jazz Coffee Shop', artist: 'alex-morgan', url: 'https://cdn.pixabay.com/download/audio/2026/06/16/audio_912babebe1.mp3?filename=alex-morgan-chillhop-jazz-coffee-shop-552792.mp3', cover: 'https://cdn.pixabay.com/audio/2026/06/16/18-47-53-884_200x200.jpg', seconds: 173 },
+    { id: 'subclair-lofi', title: 'Lofi', artist: 'Sub_Clair', url: 'https://cdn.pixabay.com/download/audio/2026/08/15/audio_7249b5f798.mp3?filename=sub_clair-lofi-586095.mp3', cover: 'https://cdn.pixabay.com/audio/2026/08/15/08-51-29-850_200x200.jpg', seconds: 214 },
+    { id: 'kulakovka-relax', title: 'LoFi Relax', artist: 'Kulakovka', url: 'https://cdn.pixabay.com/download/audio/2026/07/20/audio_d3e4d47bc2.mp3?filename=kulakovka-lofi-relax-570489.mp3', cover: 'https://cdn.pixabay.com/gradients/82bfb5-eac560_200x200.png', seconds: 140 },
+    { id: 'apalon-lofi', title: 'Lofi', artist: 'APALONBeats', url: 'https://cdn.pixabay.com/download/audio/2026/07/29/audio_453d7bbab8.mp3?filename=apalonbeats-lofi-576261.mp3', cover: 'https://cdn.pixabay.com/audio/2026/07/29/14-51-13-130_200x200.jpg', seconds: 128 },
+    { id: 'monda-lofi', title: 'LoFi Music', artist: 'MondaMusic', url: 'https://cdn.pixabay.com/download/audio/2026/08/20/audio_cd7ca920a0.mp3?filename=mondamusic-lofi-lofi-music-589107.mp3', cover: 'https://cdn.pixabay.com/audio/2026/08/20/09-14-53-672_200x200.jpg', seconds: 98 },
+    { id: 'zephira-chill', title: 'Chill Lofi', artist: 'ZephiraMusic', url: 'https://cdn.pixabay.com/download/audio/2026/08/14/audio_a5f2abd4d3.mp3?filename=zephiramusic-chill-lofi-585360.mp3', cover: 'https://cdn.pixabay.com/gradients/67a871-909cf2_200x200.png', seconds: 137 },
+    { id: 'coffee-shop', title: 'Lofi Coffee Shop', artist: 'alex-morgan', url: 'https://cdn.pixabay.com/download/audio/2026/07/15/audio_6353298add.mp3?filename=alex-morgan-lofi-coffee-shop-568150.mp3', cover: 'https://cdn.pixabay.com/audio/2026/07/15/21-20-45-679_200x200.jpg', seconds: 114 },
+    { id: 'midnight-club', title: 'Lofi Midnight Club', artist: 'alex-morgan', url: 'https://cdn.pixabay.com/download/audio/2026/07/15/audio_53935e58bb.mp3?filename=alex-morgan-lofi-midnight-club-568164.mp3', cover: 'https://cdn.pixabay.com/audio/2026/07/15/21-18-58-754_200x200.jpg', seconds: 137 },
 ];
+
+// ---------- color helpers ----------
+function hexToHsl(hex: string): { h: number; s: number; l: number } {
+    const m = hex.replace('#', '');
+    const r = parseInt(m.slice(0, 2), 16) / 255, g = parseInt(m.slice(2, 4), 16) / 255, b = parseInt(m.slice(4, 6), 16) / 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    const l = (max + min) / 2;
+    if (max === min) return { h: 0, s: 0, l };
+    const d = max - min;
+    const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    let h = 0;
+    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0));
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    return { h: h * 60, s, l };
+}
+function hslToHex(h: number, s: number, l: number): string {
+    const f = (n: number) => {
+        const k = (n + h / 30) % 12;
+        const a = s * Math.min(l, 1 - l);
+        const c = l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+        return Math.round(c * 255).toString(16).padStart(2, '0');
+    };
+    return `#${f(0)}${f(8)}${f(4)}`;
+}
+// Relative luminance (0 dark .. 1 light), used to keep the clock readable on light backgrounds.
+function relLuma(hex: string): number {
+    const m = hex.replace('#', '');
+    if (!/^[0-9a-f]{6}$/i.test(m)) return 0;
+    const ch = (i: number) => { const v = parseInt(m.slice(i, i + 2), 16) / 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    return 0.2126 * ch(0) + 0.7152 * ch(2) + 0.0722 * ch(4);
+}
 
 // Animated source videos stream directly from Pixabay's CDN only when selected (embedding allowed per Pixabay API terms). Picker previews are one small composed atlas.
 // Illustrated scenes are drawn as seamless loops and hard-loop natively. Photographed scenes are near-static compositions with continuous water/fog motion; their wrap is covered by a short crossfade (blend: true), not claimed to be seamless.
@@ -233,10 +283,10 @@ const FONTS = [
 ];
 
 const THEMES: { id: string; name: string; accent: string; font: string; bg: { kind: BgKind; id: string } }[] = [
-    { id: 'mint', name: 'Mint', accent: '#9fd8c6', font: 'sans', bg: { kind: 'gradient', id: 'ink' } },
-    { id: 'dusk', name: 'Dusk', accent: '#ffcf99', font: 'serif', bg: { kind: 'gradient', id: 'dusk' } },
-    { id: 'moss', name: 'Moss', accent: '#7ea87b', font: 'round', bg: { kind: 'gradient', id: 'moss' } },
-    { id: 'dawn', name: 'Dawn', accent: '#f2a9c4', font: 'serif', bg: { kind: 'gradient', id: 'dawn' } },
+    { id: 'mint', name: 'Mint', accent: '#9fd8c6', font: 'sans', bg: { kind: 'color', id: '#101418' } },
+    { id: 'dusk', name: 'Dusk', accent: '#ffcf99', font: 'serif', bg: { kind: 'color', id: '#3b2f4a' } },
+    { id: 'moss', name: 'Moss', accent: '#7ea87b', font: 'round', bg: { kind: 'color', id: '#0f2e25' } },
+    { id: 'dawn', name: 'Dawn', accent: '#f2a9c4', font: 'serif', bg: { kind: 'color', id: '#4a2f3d' } },
 ];
 
 const ALARMS = [
@@ -413,7 +463,7 @@ async function fetchImageBlob(url: string): Promise<Blob> {
     }
 }
 
-async function resolveImageSource(input: string): Promise<Blob> {
+async function resolveImageSource(input: string): Promise<{ blob: Blob; finalUrl: string }> {
     const trimmed = input.trim();
     if (/pin\.it\//i.test(trimmed)) throw new Error('short pin link');
     const pinMatch = trimmed.match(/pinterest\.[a-z.]+\/pin\/(?:.*?-)?(\d{6,})/i);
@@ -433,11 +483,14 @@ async function resolveImageSource(input: string): Promise<Blob> {
     const pinCdn = imageUrl.match(/^(https:\/\/i\.pinimg\.com)\/(?:236x|564x|736x)(\/.*)$/i);
     if (pinCdn) {
         try {
-            return await fetchImageBlob(`${pinCdn[1]}/originals${pinCdn[2]}`);
+            const originalUrl = `${pinCdn[1]}/originals${pinCdn[2]}`;
+            const blob = await fetchImageBlob(originalUrl);
+            return { blob, finalUrl: originalUrl };
         } catch { /* original unavailable; use the pasted size below */ }
     }
     if (!/^https:\/\//i.test(imageUrl)) throw new Error('not a link');
-    return fetchImageBlob(imageUrl);
+    const blob = await fetchImageBlob(imageUrl);
+    return { blob, finalUrl: imageUrl };
 }
 
 // ---------- spotify ----------
@@ -621,23 +674,22 @@ const Background = React.memo(function Background({ kind, id, scrim, builtinSrc,
 }) {
     let style: React.CSSProperties = {};
     if (kind === 'builtin' && builtinSrc) style = { backgroundImage: `url(${builtinSrc})` };
-    else if (kind === 'gradient') style = { backgroundImage: (GRADIENTS.find((g) => g.id === id) || GRADIENTS[0]).css };
+    else if (kind === 'color') style = { backgroundColor: /^#[0-9a-f]{6}$/i.test(id || '') ? id! : '#101418' };
     else if (kind === 'link' && linkBg?.kind === 'image') style = { backgroundImage: `url(${linkBg.url})` };
     else if (kind === 'upload' && uploadBg?.kind === 'image') style = { backgroundImage: `url(${uploadBg.url})` };
-    else if (kind === 'link' || kind === 'upload' || kind === 'builtin') style = { backgroundImage: GRADIENTS[0].css };
+    else if (kind === 'link' || kind === 'upload' || kind === 'builtin') style = { backgroundColor: '#101418' };
     if ((kind === 'link' || kind === 'upload') && style.backgroundImage) { style = {...style, backgroundSize: customFit, backgroundRepeat:'no-repeat',backgroundColor:'#101418'}; if (enhance !== false) style = {...style, filter: 'url(#ft-sharpen) saturate(1.08) contrast(1.05)'}; }
-    const animId = ANIMATED_BGS.some((a) => a.id === id) ? id! : 'aurora';
     const scene = kind === 'scene' ? (SCENE_BY_ID.get(id!) || SCENES[0]) : undefined;
     const linkVideo = kind === 'link' && linkBg?.kind === 'video' ? linkBg.url : kind === 'upload' && uploadBg?.kind === 'video' ? uploadBg.url : null;
+    // A light solid color is dimmed beyond the scrim setting so the clock stays readable.
+    const effectiveScrim = kind === 'color' ? Math.max(scrim, Math.min(0.78, Math.pow(relLuma(id || '#101418'), 1.15) * 0.9)) : scrim;
     return <>
         {scene
             ? <SceneStage scene={scene} paused={!!paused} animate={animate} />
             : linkVideo
                 ? <CustomVideo src={linkVideo} paused={!!paused} animate={animate} fit={customFit} />
-                : kind === 'animated'
-                    ? <div className={`ft-anim ft-anim-${animId}`} aria-hidden="true"><i /><i /><i /></div>
-                    : <div className="ft-bg" style={style} />}
-        <div className="ft-scrim" style={{ opacity: scrim }} />
+                : <div className="ft-bg" style={style} />}
+        <div className="ft-scrim" style={{ opacity: effectiveScrim }} />
         <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true"><filter id="ft-sharpen"><feConvolveMatrix order="3" kernelMatrix="0 -0.3 0 -0.3 2.2 -0.3 0 -0.3 0" /></filter></svg>
     </>;
 });
@@ -679,6 +731,261 @@ const BgSwatch = React.memo(function BgSwatch({ id, name, active, onPick }: { id
         return () => { alive = false; };
     }, [id]);
     return <button type="button" className={`ft-bgswatch ${active ? 'is-active' : ''}`} style={src ? { backgroundImage: `url(${src})` } : undefined} aria-label={name} onClick={onPick} />;
+});
+
+// ---------- color wheel: any solid background color ----------
+const ColorWheel = React.memo(function ColorWheel({ color, onChange }: { color: string; onChange: (hex: string) => void }) {
+    const SIZE = 168;
+    const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    const valid = /^#[0-9a-f]{6}$/i.test(color) ? color : '#101418';
+    const hsl = hexToHsl(valid);
+    const [light, setLight] = useState(hsl.l);
+    useEffect(() => { setLight(hexToHsl(/^#[0-9a-f]{6}$/i.test(color) ? color : '#101418').l); }, [color]);
+    useEffect(() => {
+        const ctx = canvasRef.current?.getContext('2d');
+        if (!ctx) return;
+        const img = ctx.createImageData(SIZE, SIZE);
+        const d = img.data;
+        const half = SIZE / 2;
+        for (let y = 0; y < SIZE; y++) {
+            for (let x = 0; x < SIZE; x++) {
+                const dx = x - half + 0.5, dy = y - half + 0.5;
+                const r = Math.sqrt(dx * dx + dy * dy) / half;
+                const i = (y * SIZE + x) * 4;
+                if (r > 1) { d[i + 3] = 0; continue; }
+                const h = ((Math.atan2(dy, dx) * 180 / Math.PI) + 360) % 360;
+                const hex = hslToHex(h, r, light);
+                d[i] = parseInt(hex.slice(1, 3), 16);
+                d[i + 1] = parseInt(hex.slice(3, 5), 16);
+                d[i + 2] = parseInt(hex.slice(5, 7), 16);
+                d[i + 3] = 255;
+            }
+        }
+        ctx.putImageData(img, 0, 0);
+    }, [light]);
+    const pick = (e: React.PointerEvent) => {
+        const rect = canvasRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        const dx = e.clientX - rect.left - rect.width / 2;
+        const dy = e.clientY - rect.top - rect.height / 2;
+        const r = Math.min(1, Math.sqrt(dx * dx + dy * dy) / (rect.width / 2));
+        const h = ((Math.atan2(dy, dx) * 180 / Math.PI) + 360) % 360;
+        onChange(hslToHex(h, r, light));
+    };
+    const ang = hsl.h * Math.PI / 180;
+    const rad = hsl.s * (SIZE / 2);
+    return <div className="ft-wheelwrap">
+        <span className="ft-wheelbox">
+            <canvas ref={canvasRef} width={SIZE} height={SIZE} className="ft-wheel" aria-label="Color wheel: drag to pick a background color"
+                onPointerDown={(e) => { (e.target as HTMLElement).setPointerCapture(e.pointerId); pick(e); }}
+                onPointerMove={(e) => { if (e.buttons & 1) pick(e); }} />
+            <span className="ft-wheel-dot" style={{ left: SIZE / 2 + Math.cos(ang) * rad, top: SIZE / 2 + Math.sin(ang) * rad, background: valid }} />
+        </span>
+        <span className="ft-wheel-side">
+            <span className="ft-wheel-preview" style={{ background: valid }}>{valid}</span>
+            <input type="range" min={0.05} max={0.95} step={0.01} value={light} aria-label="Color lightness" onChange={(e) => { const l = parseFloat(e.target.value); setLight(l); onChange(hslToHex(hsl.h, hsl.s, l)); }} />
+            <span className="ft-field-hint">Drag the wheel for hue, slide for lightness. Light colors are dimmed behind the timer so text stays readable.</span>
+        </span>
+    </div>;
+});
+
+// ---------- saved link backgrounds ----------
+interface SavedLink { id: string; source: string; kind: 'image' | 'video'; thumb?: string; addedAt: number }
+function linkThumbUrl(l: SavedLink): string {
+    if (l.kind !== 'image' || !l.thumb) return '';
+    return `https://images.weserv.nl/?url=${encodeURIComponent(l.thumb.replace(/^https?:\/\//, ''))}&w=200&h=200&fit=cover&q=70`;
+}
+function linkLabel(source: string): string {
+    try {
+        const u = new URL(source);
+        if (/pinterest\./i.test(u.host)) return 'Pinterest pin';
+        const file = decodeURIComponent(u.pathname.split('/').pop() || '');
+        return file.length > 4 && /\.(jpe?g|png|gif|webp|avif|mp4|webm|mov|m4v)/i.test(file) ? file.slice(0, 26) : u.host.replace(/^www\./, '');
+    } catch { return 'Saved link'; }
+}
+const LinkSwatch = React.memo(function LinkSwatch({ link, active, onPick, onRemove }: { link: SavedLink; active: boolean; onPick: () => void; onRemove: () => void }) {
+    const thumb = linkThumbUrl(link);
+    return <span className={`ft-bgswatch ft-bgswatch-named ft-linksw ${active ? 'is-active' : ''}`}>
+        <button type="button" className="ft-linksw-pick" aria-label={`Use saved background ${linkLabel(link.source)}`} onClick={onPick}>
+            {link.kind === 'video'
+                ? <video className="ft-bgswatch-img" src={link.source} muted playsInline preload="metadata" />
+                : thumb ? <img className="ft-bgswatch-img" src={thumb} alt="" loading="lazy" decoding="async" /> : null}
+            <span className="ft-bgswatch-name">{linkLabel(link.source)}</span>
+        </button>
+        <button type="button" className="ft-linksw-del" aria-label={`Remove saved background ${linkLabel(link.source)}`} onClick={onRemove}>×</button>
+    </span>;
+});
+
+// ---------- mini music player: built-in focus radio or the user's Spotify embed ----------
+const MusicPlayer = React.memo(function MusicPlayer({ settings, patch, spotifySrc, onOpenSettings }: {
+    settings: Settings; patch: (part: Partial<Settings>) => void; spotifySrc: string | null; onOpenSettings: () => void;
+}) {
+    const mode = settings.musicMode === 'spotify' ? 'spotify' : 'radio';
+    const radio = settings.radio && typeof settings.radio.index === 'number' ? settings.radio : { index: 0, playing: false, volume: 0.7 };
+    const track = RADIO_TRACKS[Math.min(Math.max(0, radio.index), RADIO_TRACKS.length - 1)] || RADIO_TRACKS[0];
+    const radioRef = useRef(radio);
+    radioRef.current = radio;
+    const modeRef = useRef(mode);
+    modeRef.current = mode;
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+    const [elapsed, setElapsed] = useState(0);
+    const [status, setStatus] = useState('');
+    const errCountRef = useRef(0);
+    const [minimized, setMinimized] = useState(false);
+
+    // position (drag), persisted on this device
+    const boxRef = useRef<HTMLDivElement | null>(null);
+    const [pos, setPos] = useState<{ x: number; y: number } | null>(() => {
+        try {
+            const raw = window.localStorage.getItem('sft:ft-player-pos.v1');
+            if (raw) { const p = JSON.parse(raw); if (p && typeof p.x === 'number' && typeof p.y === 'number') return p; }
+        } catch { /* ignore */ }
+        return null;
+    });
+    const dragRef = useRef<{ dx: number; dy: number } | null>(null);
+    const clampPos = (x: number, y: number) => {
+        const el = boxRef.current;
+        const w = el ? el.offsetWidth : 320, h = el ? el.offsetHeight : 180;
+        return { x: Math.max(4, Math.min(Math.max(4, window.innerWidth - w - 4), x)), y: Math.max(4, Math.min(Math.max(4, window.innerHeight - h - 4), y)) };
+    };
+    const onDragStart = (e: React.PointerEvent) => {
+        const rect = boxRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        dragRef.current = { dx: e.clientX - rect.left, dy: e.clientY - rect.top };
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    };
+    const onDragMove = (e: React.PointerEvent) => {
+        if (!dragRef.current) return;
+        setPos(clampPos(e.clientX - dragRef.current.dx, e.clientY - dragRef.current.dy));
+    };
+    const onDragEnd = () => {
+        if (!dragRef.current) return;
+        dragRef.current = null;
+        setPos((p) => {
+            if (!p) return p;
+            const c = clampPos(p.x, p.y);
+            try { window.localStorage.setItem('sft:ft-player-pos.v1', JSON.stringify(c)); } catch { /* ignore */ }
+            return c;
+        });
+    };
+    useEffect(() => {
+        const onResize = () => setPos((p) => (p ? clampPos(p.x, p.y) : p));
+        window.addEventListener('resize', onResize);
+        return () => window.removeEventListener('resize', onResize);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // ----- radio engine: one audio element, tracks advance in order and loop -----
+    useEffect(() => {
+        const a = new Audio();
+        a.preload = 'auto';
+        audioRef.current = a;
+        const onTime = () => setElapsed(a.currentTime || 0);
+        const onEnded = () => { errCountRef.current = 0; setStatus(''); patch({ radio: { ...radioRef.current, index: (radioRef.current.index + 1) % RADIO_TRACKS.length, playing: true } }); };
+        const onErr = () => {
+            if (!audioRef.current || audioRef.current.dataset.track !== track.id) return;
+            errCountRef.current += 1;
+            if (errCountRef.current >= RADIO_TRACKS.length) {
+                setStatus('Radio tracks cannot load on this connection right now.');
+                patch({ radio: { ...radioRef.current, playing: false } });
+            } else {
+                setStatus('That track could not load - skipped it.');
+                patch({ radio: { ...radioRef.current, index: (radioRef.current.index + 1) % RADIO_TRACKS.length, playing: true } });
+            }
+        };
+        a.addEventListener('timeupdate', onTime);
+        a.addEventListener('ended', onEnded);
+        a.addEventListener('error', onErr);
+        return () => { a.pause(); a.removeEventListener('timeupdate', onTime); a.removeEventListener('ended', onEnded); a.removeEventListener('error', onErr); audioRef.current = null; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+    // load the selected track
+    useEffect(() => {
+        const a = audioRef.current;
+        if (!a) return;
+        if (a.dataset.track !== track.id) {
+            a.dataset.track = track.id;
+            a.src = track.url;
+            errCountRef.current = 0;
+            setElapsed(0);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [track.id]);
+    // play / pause / volume
+    useEffect(() => {
+        const a = audioRef.current;
+        if (!a) return;
+        a.volume = radio.volume;
+        if (mode === 'radio' && radio.playing) a.play().catch(() => { /* blocked until the first tap; the pointerdown listener retries */ });
+        else a.pause();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [mode, radio.playing, radio.volume, track.id]);
+    // browsers block audio autoplay after a reload: resume on the first real gesture
+    useEffect(() => {
+        const resume = () => { const a = audioRef.current; if (a && modeRef.current === 'radio' && radioRef.current.playing && a.paused) a.play().catch(() => { /* still blocked */ }); };
+        window.addEventListener('pointerdown', resume);
+        return () => window.removeEventListener('pointerdown', resume);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+    // the radio never plays under the Spotify player
+    useEffect(() => {
+        if (mode === 'spotify' && radioRef.current.playing) patch({ radio: { ...radioRef.current, playing: false } });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [mode]);
+
+    const seek = (e: React.MouseEvent<HTMLSpanElement>) => {
+        const a = audioRef.current;
+        if (!a) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+        const total = Number.isFinite(a.duration) && a.duration > 0 ? a.duration : track.seconds;
+        a.currentTime = ratio * total;
+        setElapsed(a.currentTime);
+    };
+    const dur = track.seconds;
+    const pct = dur > 0 ? Math.min(100, (elapsed / dur) * 100) : 0;
+    const grip = 'M9 6h.01|M15 6h.01|M9 12h.01|M15 12h.01|M9 18h.01|M15 18h.01';
+
+    return <div ref={boxRef} className={`ft-player ${minimized ? 'is-mini' : ''}`} style={pos ? { left: pos.x, top: pos.y, right: 'auto', bottom: 'auto' } : undefined} data-testid="music-player">
+        <span className="ft-player-head" title="Drag to move" onPointerDown={onDragStart} onPointerMove={onDragMove} onPointerUp={onDragEnd} onPointerCancel={onDragEnd}>
+            <SvgIcon d={grip} />
+            <span className="ft-player-mode">
+                <button type="button" className={`ft-player-modebtn ${mode === 'radio' ? 'is-active' : ''}`} onPointerDown={(e) => e.stopPropagation()} onClick={() => patch({ musicMode: 'radio' })}>Focus radio</button>
+                <button type="button" className={`ft-player-modebtn ${mode === 'spotify' ? 'is-active' : ''}`} onPointerDown={(e) => e.stopPropagation()} onClick={() => patch({ musicMode: 'spotify' })}>Spotify</button>
+            </span>
+            <button type="button" className="ft-player-x" aria-label={minimized ? 'Expand player' : 'Minimize player'} onPointerDown={(e) => e.stopPropagation()} onClick={() => setMinimized((m) => !m)}>{minimized ? '❐' : '–'}</button>
+            <button type="button" className="ft-player-x" aria-label="Hide player" onPointerDown={(e) => e.stopPropagation()} onClick={() => patch({ musicOpen: false })}>×</button>
+        </span>
+        {minimized ? <div className="ft-player-minrow">
+            {mode === 'radio' ? <>
+                <button type="button" className="ft-player-play is-small" aria-label={radio.playing ? 'Pause radio' : 'Play radio'} onClick={() => patch({ radio: { ...radio, playing: !radio.playing } })}>{radio.playing ? '❚❚' : '▶'}</button>
+                <span className="ft-player-mintitle">{track.title}</span>
+            </> : <span className="ft-player-mintitle">Spotify player</span>}
+        </div> : mode === 'radio' ? <div className="ft-player-body">
+            <span className="ft-player-row">
+                <img className="ft-player-cover" src={track.cover} alt="" loading="lazy" decoding="async" />
+                <span className="ft-player-meta">
+                    <span className="ft-player-title">{track.title}</span>
+                    <span className="ft-player-artist">{track.artist} · instrumental lofi</span>
+                    <span className="ft-player-bar" onClick={seek} role="slider" aria-label="Track progress" aria-valuemin={0} aria-valuemax={dur} aria-valuenow={Math.round(elapsed)}>
+                        <span style={{ width: `${pct}%` }} />
+                    </span>
+                    <span className="ft-player-times">{fmt(elapsed * 1000)} / {fmt(dur * 1000)}</span>
+                </span>
+            </span>
+            <span className="ft-player-controls">
+                <button type="button" className="ft-player-btn" aria-label="Previous track" onClick={() => patch({ radio: { ...radio, index: (radio.index - 1 + RADIO_TRACKS.length) % RADIO_TRACKS.length, playing: true } })}>⏮</button>
+                <button type="button" className="ft-player-play" aria-label={radio.playing ? 'Pause' : 'Play'} onClick={() => patch({ radio: { ...radio, playing: !radio.playing } })}>{radio.playing ? '❚❚' : '▶'}</button>
+                <button type="button" className="ft-player-btn" aria-label="Next track" onClick={() => patch({ radio: { ...radio, index: (radio.index + 1) % RADIO_TRACKS.length, playing: true } })}>⏭</button>
+                <input type="range" className="ft-player-vol" min={0} max={1} step={0.05} value={radio.volume} aria-label="Radio volume" onChange={(e) => patch({ radio: { ...radio, volume: parseFloat(e.target.value) } })} />
+            </span>
+            {status ? <span className="ft-player-status">{status}</span> : null}
+        </div> : <div className="ft-player-body">
+            {spotifySrc
+                ? <iframe className="ft-player-iframe" src={spotifySrc} width="100%" height="152" frameBorder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" title="Spotify player" />
+                : <span className="ft-player-status">Pick a Spotify playlist or paste a Spotify link in Settings. <button type="button" className="ft-ghost is-compact" onClick={onOpenSettings}>Open settings</button></span>}
+        </div>}
+    </div>;
 });
 
 const TopBar = React.memo(function TopBar({ chip, panel, fullscreenSupported, onFullscreen, onTasks, onSettings, onMinimize, onPopout, onProfile }: {
@@ -777,15 +1084,16 @@ function PopoutMirror() {
     </div>;
 }
 
-const SettingsSheet = React.memo(function SettingsSheet({ settings, patch, bgStatus, soundStatus, lastBgSrcRef, lastSndSrcRef, resolveLinkBg, resolveCustomSound, uploadBg, uploadSound, previewAlarm, requestNotifications, notificationsSupported, wakeLockSupported, onResetSettings, savedMessage, onClose }: {
+const SettingsSheet = React.memo(function SettingsSheet({ settings, patch, bgStatus, soundStatus, lastBgSrcRef, lastSndSrcRef, resolveLinkBg, resolveCustomSound, uploadBg, uploadSound, previewAlarm, requestNotifications, notificationsSupported, wakeLockSupported, onResetSettings, savedMessage, onClose, savedLinks, onSaveLink, onRemoveLink }: {
     settings: Settings; patch: (part: Partial<Settings>) => void;
     bgStatus: string; soundStatus: string;
     lastBgSrcRef: React.MutableRefObject<string>; lastSndSrcRef: React.MutableRefObject<string>;
-    resolveLinkBg: (source: string) => Promise<boolean>; resolveCustomSound: (source: string) => Promise<boolean>;
+    resolveLinkBg: (source: string) => Promise<false | { kind: 'image' | 'video'; finalUrl: string }>; resolveCustomSound: (source: string) => Promise<boolean>;
     uploadBg: (file: File | undefined) => void; uploadSound: (file: File | undefined) => void;
     previewAlarm: (id: string) => void; requestNotifications: (on: boolean) => void;
     notificationsSupported: boolean; wakeLockSupported: boolean;
     onResetSettings: () => void; savedMessage: string; onClose: () => void;
+    savedLinks: SavedLink[]; onSaveLink: (l: SavedLink) => void; onRemoveLink: (id: string) => void;
 }) {
     const [bgInput, setBgInput] = useState('');
     const [soundInput, setSoundInput] = useState('');
@@ -796,7 +1104,18 @@ const SettingsSheet = React.memo(function SettingsSheet({ settings, patch, bgSta
     const applyBgLink = () => {
         const source = bgInput.trim();
         if (!source) return;
-        void resolveLinkBg(source).then((ok) => { if (ok) { lastBgSrcRef.current = source; patch({ background: { kind: 'link', source } }); } });
+        void resolveLinkBg(source).then((info) => {
+            if (info) {
+                lastBgSrcRef.current = source;
+                patch({ background: { kind: 'link', source } });
+                if (!savedLinks.some((l) => l.source === source)) onSaveLink({ id: `l${Date.now()}`, source, kind: info.kind, thumb: info.kind === 'image' ? info.finalUrl : undefined, addedAt: Date.now() });
+                setBgInput('');
+            }
+        });
+    };
+    const pickLink = (l: SavedLink) => {
+        if (bg.kind === 'link' && bg.source === l.source) return;
+        void resolveLinkBg(l.source).then((info) => { if (info) { lastBgSrcRef.current = l.source; patch({ background: { kind: 'link', source: l.source } }); } });
     };
     const applySoundLink = () => {
         const source = soundInput.trim();
@@ -848,20 +1167,27 @@ const SettingsSheet = React.memo(function SettingsSheet({ settings, patch, bgSta
         </section>
 
         <section>
-            <h3>Music (Spotify player)</h3>
+            <h3>Music</h3>
             <div className="ft-chips">
-                {SPOTIFY_PRESETS.map((p) => <button key={p.id} type="button" className={`ft-chipbtn ${settings.spotify === p.id ? 'is-active' : ''}`} onClick={() => { setSpStatus(''); patch({ spotify: p.id, spotifyOpen: true }); }}>{p.name}</button>)}
+                <button type="button" className={`ft-chipbtn ${settings.musicMode !== 'spotify' ? 'is-active' : ''}`} onClick={() => patch({ musicMode: 'radio', musicOpen: true })}>Focus radio</button>
+                <button type="button" className={`ft-chipbtn ${settings.musicMode === 'spotify' ? 'is-active' : ''}`} onClick={() => patch({ musicMode: 'spotify', musicOpen: true })}>Spotify</button>
+            </div>
+            <span className="ft-field-hint">Focus radio is built-in instrumental lofi that streams from Pixabay (free license, no account needed). The mini player floats on the page - drag it anywhere by its top bar. It shows the current track and its cover live. The tracks are instrumentals, so there are no lyrics to display.</span>
+            <Toggle label="Show mini player" checked={settings.musicOpen !== false} onChange={(v) => patch({ musicOpen: v })} />
+            <h4 className="ft-subhead">Spotify playlists</h4>
+            <div className="ft-chips">
+                {SPOTIFY_PRESETS.map((p) => <button key={p.id} type="button" className={`ft-chipbtn ${settings.spotify === p.id ? 'is-active' : ''}`} onClick={() => { setSpStatus(''); patch({ spotify: p.id, spotifyOpen: true, musicMode: 'spotify', musicOpen: true }); }}>{p.name}</button>)}
             </div>
             <div className="ft-field is-stacked">
                 <span className="ft-field-label">Any Spotify link</span>
-                <span className="ft-field-hint">Paste an open.spotify.com playlist, album, track or podcast link (in Spotify: Share - Copy link). Music plays in Spotify's official player at the bottom of the page; this is not account sync. Spotify decides what plays: usually full songs when you sign in to Spotify inside the player, 30-second previews when signed out; podcast episodes usually play in full.</span>
+                <span className="ft-field-hint">Paste an open.spotify.com playlist, album, track or podcast link (in Spotify: Share - Copy link). Music plays in Spotify's official player inside the mini player, with the album art shown by Spotify; this is not account sync. Spotify decides what plays: usually full songs when you sign in to Spotify inside the player, 30-second previews when signed out; podcast episodes usually play in full. Live lyrics are not possible here: Spotify only shares the current song with connected apps, not with an embedded player.</span>
                 <span className="ft-inrow">
                     <input className="ft-textinput" value={spInput} placeholder="https://open.spotify.com/playlist/…" onChange={(e) => setSpInput(e.target.value)} inputMode="url" />
                     <button type="button" className="ft-ghost is-compact" onClick={applySpotify}>Use link</button>
                 </span>
                 {settings.spotify ? <span className="ft-inrow">
-                    <button type="button" className="ft-ghost is-compact" onClick={() => patch({ spotifyOpen: !settings.spotifyOpen })}>{settings.spotifyOpen ? 'Minimize player' : 'Show player'}</button>
-                    <button type="button" className="ft-ghost is-compact" onClick={() => patch({ spotify: null, spotifyOpen: false })}>Remove player</button>
+                    <button type="button" className="ft-ghost is-compact" onClick={() => patch({ musicMode: 'spotify', musicOpen: true })}>Show player</button>
+                    <button type="button" className="ft-ghost is-compact" onClick={() => patch({ spotify: null, spotifyOpen: false, musicMode: 'radio' })}>Remove player</button>
                 </span> : null}
                 {spStatus ? <span className="ft-field-hint">{spStatus}</span> : null}
             </div>
@@ -924,25 +1250,29 @@ const SettingsSheet = React.memo(function SettingsSheet({ settings, patch, bgSta
             </div>
             <p className="ft-field-hint">Scenes fill the whole screen. Illustrated scenes are drawn to loop seamlessly; photographed scenes crossfade briefly over their loop point. Videos stream directly from Pixabay only when chosen. While a scene loads, your previous background stays on screen (a still photo on your first visit); a scene that cannot load keeps it rather than going black or swapping to something else.</p>
             <Toggle label="Animate backgrounds" hint="Motion starts by itself. Turn off to pause motion and save battery." checked={settings.bgAnimate !== false} onChange={(v) => patch({ bgAnimate: v })} />
-            <h4 className="ft-subhead">Animated</h4>
-            <div className="ft-bggrid">
-                {ANIMATED_BGS.map((a) => <button key={a.id} type="button" className={`ft-bgswatch ft-animsw ft-animsw-${a.id} ${bg.kind === 'animated' && bg.id === a.id ? 'is-active' : ''}`} aria-label={`${a.name} animated background`} onClick={() => patch({ background: { kind: 'animated', id: a.id } })} />)}
-            </div>
             <h4 className="ft-subhead">Photos</h4>
             <div className="ft-bggrid">
                 {BUILTIN_BGS.map((b) => <BgSwatch key={b.id} id={b.id} name={b.name} active={bg.kind === 'builtin' && bg.id === b.id} onPick={() => patch({ background: { kind: 'builtin', id: b.id } })} />)}
             </div>
-            <h4 className="ft-subhead">Colors</h4>
+            <h4 className="ft-subhead">Solid color</h4>
             <div className="ft-bggrid">
-                {GRADIENTS.map((g) => <button key={g.id} type="button" className={`ft-bgswatch ${bg.kind === 'gradient' && bg.id === g.id ? 'is-active' : ''}`} style={{ backgroundImage: g.css }} aria-label={g.name} onClick={() => patch({ background: { kind: 'gradient', id: g.id } })} />)}
+                {SOLID_COLORS.map((c) => <button key={c.id} type="button" className={`ft-bgswatch ${bg.kind === 'color' && (bg.id || '').toLowerCase() === c.id ? 'is-active' : ''}`} style={{ background: c.id }} aria-label={`${c.name} background color`} onClick={() => patch({ background: { kind: 'color', id: c.id } })} />)}
             </div>
+            <ColorWheel color={bg.kind === 'color' && bg.id ? bg.id : '#101418'} onChange={(hex) => patch({ background: { kind: 'color', id: hex } })} />
             <div className="ft-field is-stacked">
                 <span className="ft-field-label">Pinterest, image or video link</span>
-                <span className="ft-field-hint">Paste a full public Pinterest pin link (pinterest.com/pin/…), a direct image link (JPG, PNG, GIF) or a direct video link (mp4, webm). Anything you add is fitted to fill the screen, cropped to match its own shape, never stretched. Saved links reload each visit. When a direct image load is blocked, the link you paste is fetched through a public image relay (weserv.nl), so never use private boards or private URLs.</span>
+                <span className="ft-field-hint">Paste a full public Pinterest pin link (pinterest.com/pin/…), a direct image link (JPG, PNG, GIF) or a direct video link (mp4, webm). Anything you add is fitted to fill the screen, cropped to match its own shape, never stretched. Every link you add is saved under My saved backgrounds below and reloads each visit - paste once, keep forever. When a direct image load is blocked, the link you paste is fetched through a public image relay (weserv.nl), so never use private boards or private URLs.</span>
                 <span className="ft-inrow">
                     <input className="ft-textinput" value={bgInput} placeholder="https://www.pinterest.com/pin/…" onChange={(e) => setBgInput(e.target.value)} inputMode="url" />
                     <button type="button" className="ft-ghost is-compact" onClick={applyBgLink}>Use link</button>
                 </span>
+                {savedLinks.length ? <>
+                    <h4 className="ft-subhead">My saved backgrounds</h4>
+                    <div className="ft-bggrid">
+                        {savedLinks.map((l) => <LinkSwatch key={l.id} link={l} active={bg.kind === 'link' && bg.source === l.source} onPick={() => pickLink(l)} onRemove={() => onRemoveLink(l.id)} />)}
+                    </div>
+                    <span className="ft-field-hint">Tap one to use it again, × to forget it. Saved on this device.</span>
+                </> : null}
                 <span className="ft-inrow">
                     <label className="ft-ghost is-compact ft-filebtn">Upload image or video<input type="file" accept="image/*,video/*" aria-label="Upload background image or video file" className="ft-fileinput" onChange={(e) => uploadBg(e.target.files?.[0])} /></label>
                     <span className="ft-field-hint">Lasts until the tab reloads.</span>
@@ -961,7 +1291,7 @@ const SettingsSheet = React.memo(function SettingsSheet({ settings, patch, bgSta
             <span className="ft-field-label">Start over</span>
             <button type="button" className="ft-ghost is-compact" onClick={onResetSettings}>Reset settings</button>
         </div>
-        <p className="ft-field-hint">Your settings, tasks and stats stay in this browser. Link backgrounds and sounds are fetched from the sites you paste, through the weserv.nl image relay when a direct load is blocked; Spotify playback happens inside Spotify's official player; selected catalog videos stream from Pixabay's CDN. {savedMessage}</p>
+        <p className="ft-field-hint">Your settings, saved backgrounds, tasks and stats stay in this browser. Link backgrounds and sounds are fetched from the sites you paste, through the weserv.nl image relay when a direct load is blocked; Spotify playback happens inside Spotify's official player; selected catalog videos and focus-radio tracks stream from Pixabay's CDN. {savedMessage}</p>
     </aside>;
 });
 
@@ -976,6 +1306,9 @@ function MainApp() {
     const [tasksState, setTasksState, tasksSaved] = useLocalState<TasksState>('ft-tasks.v1', { tasks: [], activeId: null });
     const [stats, setStats, statsSaved] = useLocalState<StatsState>('ft-stats.v1', { days: {} });
     const [session, setSession, sessionSaved] = useLocalState<{ phase: Phase; running: boolean; endAt: number; remainingMs: number; cycleCount: number } | null>('ft-session.v1', null);
+    const [savedLinks, setSavedLinks] = useLocalState<SavedLink[]>('ft-links.v1', []);
+    const saveLink = useCallback((l: SavedLink) => setSavedLinks((prev) => [l, ...prev.filter((x) => x.source !== l.source)].slice(0, 24)), [setSavedLinks]);
+    const removeLink = useCallback((id: string) => setSavedLinks((prev) => prev.filter((x) => x.id !== id)), [setSavedLinks]);
 
     const durations = useMemo(() => ({ focus: settings.focusMin * 60000, short: settings.shortMin * 60000, long: settings.longMin * 60000 }), [settings.focusMin, settings.shortMin, settings.longMin]);
 
@@ -1008,7 +1341,7 @@ function MainApp() {
     const wakeLockRef = useRef<any>(null);
 
     // ---------- persistence of resolved link media (re-resolve on load) ----------
-    const resolveLinkBg = useCallback(async (source: string): Promise<boolean> => {
+    const resolveLinkBg = useCallback(async (source: string): Promise<false | { kind: 'image' | 'video'; finalUrl: string }> => {
         setBgStatus('Loading background…');
         try {
             const trimmed = source.trim();
@@ -1016,16 +1349,13 @@ function MainApp() {
             if (/\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(trimmed) && !/pin(it)?\./i.test(trimmed)) {
                 setLinkBg((old) => { if (old && old.url.startsWith('blob:')) URL.revokeObjectURL(old.url); return { url: trimmed, kind: 'video' }; });
                 setBgStatus('Background applied.');
-                return true;
+                return { kind: 'video', finalUrl: trimmed };
             }
-            const blob = await resolveImageSource(source);
-            if (blob.type.startsWith('video/')) {
-                setLinkBg((old) => { if (old && old.url.startsWith('blob:')) URL.revokeObjectURL(old.url); return { url: URL.createObjectURL(blob), kind: 'video' }; });
-            } else {
-                setLinkBg((old) => { if (old && old.url.startsWith('blob:')) URL.revokeObjectURL(old.url); return { url: URL.createObjectURL(blob), kind: 'image' }; });
-            }
+            const { blob, finalUrl } = await resolveImageSource(source);
+            const kind: 'image' | 'video' = blob.type.startsWith('video/') ? 'video' : 'image';
+            setLinkBg((old) => { if (old && old.url.startsWith('blob:')) URL.revokeObjectURL(old.url); return { url: URL.createObjectURL(blob), kind }; });
             setBgStatus('Background applied.');
-            return true;
+            return { kind, finalUrl };
         } catch (err) {
             const msg = err instanceof Error && err.message === 'short pin link'
                 ? 'Short pin.it links cannot be resolved here. Open the pin on Pinterest and copy the full pinterest.com/pin/… link. Your previous background is unchanged.'
@@ -1076,7 +1406,7 @@ function MainApp() {
         if (!settingsSaved.ready || mediaInitRef.current) return;
         mediaInitRef.current = true;
         if (settings.background.kind === 'upload') { // an uploaded image does not survive a reload
-            patch({ background: { kind: 'gradient', id: 'dusk' } });
+            patch({ background: { kind: 'color', id: '#101418' } });
             setBgStatus('Your uploaded image resets when the tab reloads. Upload it again, or save a link instead.');
         }
         if (!settings.customAlarm?.source && settings.alarmSound === 'custom') { // an uploaded sound does not survive a reload
@@ -1092,6 +1422,31 @@ function MainApp() {
         if (!settings.accent || !settings.font || !settings.clockStyle || !settings.clockSize || typeof settings.showDots !== 'boolean' || typeof settings.spotifyOpen !== 'boolean' || settings.spotify === undefined || typeof settings.bgAnimate !== 'boolean') {
             setSettings((prev) => ({ ...DEFAULT_SETTINGS, ...prev }));
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [settingsSaved.ready]);
+
+    // The old gradient and CSS-animated backgrounds were removed; migrate saved picks once.
+    useEffect(() => {
+        if (!settingsSaved.ready) return;
+        const b = settings.background as { kind: string; id?: string };
+        if (b.kind === 'gradient') {
+            const map: Record<string, string> = { dusk: '#3b2f4a', moss: '#0f2e25', ink: '#101418', dawn: '#4a2f3d' };
+            patch({ background: { kind: 'color', id: map[b.id || ''] || '#101418' } });
+        } else if (b.kind === 'animated') {
+            patch({ background: { kind: 'builtin', id: 'rain' } });
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [settingsSaved.ready, settings.background]);
+
+    // One-time: anyone who had a Spotify player configured lands on Spotify mode in the mini player.
+    useEffect(() => {
+        if (!settingsSaved.ready) return;
+        try {
+            if (settings.spotify && !window.localStorage.getItem('sft:ft-musicmig.v1')) {
+                window.localStorage.setItem('sft:ft-musicmig.v1', '1');
+                patch({ musicMode: 'spotify', musicOpen: settings.spotifyOpen !== false });
+            }
+        } catch { /* storage unavailable */ }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [settingsSaved.ready]);
 
@@ -1503,6 +1858,7 @@ function MainApp() {
             onResetSettings={resetSettings}
             savedMessage={settingsSaved.message || ''}
             onClose={() => setPanel('none')}
+            savedLinks={savedLinks} onSaveLink={saveLink} onRemoveLink={removeLink}
         /> : null}
 
         {pipWin ? createPortal(<div className="ft-pip">
@@ -1516,13 +1872,6 @@ function MainApp() {
             </div>
         </div>, pipWin.document.body) : null}
 
-        {spotifySrc ? <div className={`ft-spotify ${settings.spotifyOpen ? 'is-open' : ''}`}>
-            <div className="ft-spotify-frame" aria-hidden={!settings.spotifyOpen}>
-                <iframe src={spotifySrc} width="100%" height="152" frameBorder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" title="Spotify player" />
-            </div>
-            <button type="button" className="ft-spotify-toggle" aria-expanded={settings.spotifyOpen} onClick={() => patch({ spotifyOpen: !settings.spotifyOpen })}>
-                {settings.spotifyOpen ? 'Hide player' : '♫ Music'}
-            </button>
-        </div> : null}
+        {settings.musicOpen !== false ? <MusicPlayer settings={settings} patch={patch} spotifySrc={spotifySrc} onOpenSettings={() => setPanel('settings')} /> : null}
     </div>;
-        }
+    }
