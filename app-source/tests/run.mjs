@@ -122,6 +122,7 @@ export async function clickFieldButton(page, placeholder, buttonText) {
 const featureModules = [
     './feat-timer.mjs', './feat-tasks.mjs', './feat-settings.mjs',
     './feat-bg.mjs', './feat-music.mjs', './feat-misc.mjs',
+    './feat-progression.mjs',
 ];
 
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
@@ -131,7 +132,7 @@ if (isMain) {
         const { server, port } = await serve(ROOT);
         const base = `http://127.0.0.1:${port}`;
         console.log('serving', ROOT, 'on', base);
-        const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required', '--window-size=1440,900'] });
+        const browser = await puppeteer.launch({ headless: 'new', executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined, args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required', '--window-size=1440,900'] });
         const wanted = checks.filter((c) => !ONLY || c.feature.includes(ONLY) || (c.feature + ' ' + c.name).includes(ONLY));
         let pass = 0, fail = 0;
         const failures = [];
@@ -152,4 +153,4 @@ if (isMain) {
         server.close();
         process.exit(fail ? 1 : 0);
     })().catch((e) => { console.error('RUNNER ERROR', e); process.exit(2); });
-          }
+}
